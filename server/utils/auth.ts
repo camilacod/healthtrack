@@ -1,4 +1,5 @@
 import { H3Event, getCookie, setCookie, deleteCookie, createError } from 'h3'
+import { useRuntimeConfig } from '#imports'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { db } from '../utils/db'
 import { admins, users } from '../db/schema'
@@ -7,7 +8,9 @@ import { eq } from 'drizzle-orm'
 const COOKIE_NAME = 'auth'
 
 function getSecret() {
-  const s = process.env.NUXT_SESSION_SECRET
+  // Prefer runtimeConfig to avoid build-time env inlining
+  const { sessionSecret } = useRuntimeConfig()
+  const s = sessionSecret || process.env.NUXT_SESSION_SECRET
   if (!s) throw new Error('Missing NUXT_SESSION_SECRET')
   return s
 }

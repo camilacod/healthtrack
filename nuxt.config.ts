@@ -3,5 +3,9 @@ export default defineNuxtConfig({
   srcDir: '.',
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  css: ['~/assets/css/theme.css']
+  css: ['~/assets/css/theme.css'],
+  runtimeConfig: {
+    // Private runtime config, available server-side
+    sessionSecret: '',
+  }
 })
