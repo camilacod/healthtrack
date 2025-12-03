@@ -169,25 +169,36 @@
 @media (max-width: 768px) {
   .nav-container {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.02rem; /* Reduced gap */
   }
   .nav-actions {
     justify-content: center;
     gap: 1rem;
   }
   
+  .logo-img {
+    height: 80px; /* Reduced size specifically for mobile */
+  }
+
   .hero-content {
     align-items: center;
     text-align: center;
   }
   .hero-text {
     text-align: center;
+    width: 100%;
+  }
+  .hero-image {
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .phone-img {
-    max-width: 100%;
+    max-width: 80%; /* Ensure it doesn't touch edges */
     height: auto;
-    max-height: 250px; /* Smaller than web */
+    max-height: 250px; 
     margin: 0 auto;
+    object-fit: contain;
   }
 }
 .nav-links {
