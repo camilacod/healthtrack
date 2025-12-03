@@ -167,20 +167,27 @@
 }
 
 @media (max-width: 768px) {
-  .logo {
-    margin-left: 0;
-    font-size: 1.2rem;
+  .nav-container {
+    flex-direction: column;
+    gap: 1rem;
   }
   .nav-actions {
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 1rem;
   }
-  .btn-login, .btn-signup {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.8rem;
+  
+  .hero-content {
+    align-items: center;
+    text-align: center;
+  }
+  .hero-text {
+    text-align: center;
   }
   .phone-img {
     max-width: 100%;
     height: auto;
+    max-height: 250px; /* Smaller than web */
+    margin: 0 auto;
   }
 }
 .nav-links {
