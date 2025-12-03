@@ -40,6 +40,5 @@ export async function updateUserRepo(id: string, input: UpdateUserInput): Promis
 
 export async function deleteUserRepo(id: string): Promise<boolean> {
   const res = await db.delete(users).where(eq(users.id, id))
-  // @ts-expect-error drizzle types don't expose rowCount here
   return (res?.rowCount ?? 0) > 0
 }

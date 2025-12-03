@@ -14,6 +14,6 @@ export async function listAdminsRepo(): Promise<Admin[]> {
 
 export async function deleteAdminRepo(userId: string): Promise<boolean> {
   const res = await db.delete(admins).where(eq(admins.userId, userId))
-  // @ts-expect-error drizzle types don't expose rowCount here
+
   return (res?.rowCount ?? 0) > 0
 }

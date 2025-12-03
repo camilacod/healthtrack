@@ -1,14 +1,23 @@
 :root {
+  /* New Theme Colors */
+  --primary: #0F172A;   /* Dark Navy */
+  --secondary: #F97316; /* Orange */
+  --bg-cream: #FDFBF7;  /* Cream Background */
+  --white: #ffffff;
+  --text-main: #333;
+  --text-sub: #555;
+  --border-color: #eee;
+
+  /* Legacy/Admin Colors (Optional: can be mapped to new theme or kept) */
   --burgundy: #800020;
   --burgundy-700: #5e0018;
-  --white: #ffffff;
 }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--white);
-  color: #222;
+  background: var(--bg-cream); /* Updated default background */
+  color: var(--text-main);     /* Updated default text color */
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 

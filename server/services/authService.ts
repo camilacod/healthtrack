@@ -22,7 +22,6 @@ export async function login(input: LoginInput) {
   if (!input.email || !input.password) {
     throw createError({ statusCode: 400, statusMessage: 'Credenciales requeridas' })
   }
-  // Validate via pgcrypto's crypt comparison on the DB
   const rows = await db.execute<{ id: string; email: string; username: string | null }>(
     sql`select id, email, username from ${users}
         where email = ${input.email}

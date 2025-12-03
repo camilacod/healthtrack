@@ -11,14 +11,11 @@ function buildConnectionString() {
   }
   try {
     const u = new URL(raw)
-    // Remove ssl/sslmode from URI to avoid overriding Pool.ssl object
     u.searchParams.delete('ssl')
     u.searchParams.delete('sslmode')
-    // Hint pgbouncer when using pooler
     if (/pooler\.supabase\.com$/i.test(u.hostname) && !u.searchParams.has('pgbouncer')) {
       u.searchParams.set('pgbouncer', 'true')
     }
-    // Prefer Supabase pooled port 6543 when using pooler host
     if (/pooler\.supabase\.com$/i.test(u.hostname) && (!u.port || u.port === '5432')) {
       u.port = '6543'
     }
@@ -28,7 +25,6 @@ function buildConnectionString() {
   }
 }
 
-// Reuse pool/db in dev to avoid creating many connections during HMR.
 const globalForDb = globalThis as unknown as {
   __pool?: Pool
   __db?: NodePgDatabase
@@ -38,9 +34,7 @@ export const pool: Pool =
   globalForDb.__pool ??
   new Pool({
     connectionString: buildConnectionString(),
-    // Supabase requires SSL. Using relaxed verification avoids local cert issues.
     ssl: { rejectUnauthorized: false },
-    // Serverless-friendly defaults
     max: Number(process.env.PGPOOL_MAX || 5),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT || 10_000),
     connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT || 10_000),
