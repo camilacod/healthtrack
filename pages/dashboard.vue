@@ -34,7 +34,7 @@ onMounted(load)
   <div>
     <header class="dashboard-header">
       <h1 class="page-title">Your Dashboard</h1>
-      <p class="welcome-text" v-if="me">Hello, <strong>{{ me.user?.username || me.user?.email }}</strong></p>
+      <!-- <p class="welcome-text" v-if="me">Hello, <strong>{{ me.user?.username || me.user?.email }}</strong></p> -->
     </header>
 
     <div class="dashboard-grid">
@@ -130,6 +130,7 @@ onMounted(load)
 </template>
 
 <style scoped>
+/* Variables are now global in assets/css/theme.css */
 /* ... previous styles ... */
 
 /* Add Menu Styles */
@@ -405,5 +406,29 @@ onMounted(load)
 
 .btn-add-log:hover {
   opacity: 0.9;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 600px) {
+  .card {
+    padding: 1rem;
+  }
+  .circles-container {
+    gap: 1rem;
+  }
+  .circle-ring {
+    width: 100px;
+    height: 100px;
+  }
+  .circle-ring::before {
+    width: 84px;
+    height: 84px;
+  }
+  .circle-value {
+    font-size: 1.2rem;
+  }
+  .circle-label {
+    font-size: 0.75rem;
+  }
 }
 </style>

@@ -165,6 +165,24 @@
   gap: 0.5rem;
   margin-left: -29px; /* Pulls logo slightly to the left */
 }
+
+@media (max-width: 768px) {
+  .logo {
+    margin-left: 0;
+    font-size: 1.2rem;
+  }
+  .nav-actions {
+    gap: 0.5rem;
+  }
+  .btn-login, .btn-signup {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  .phone-img {
+    max-width: 100%;
+    height: auto;
+  }
+}
 .nav-links {
   display: none;
 }

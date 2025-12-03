@@ -246,6 +246,10 @@ const menuItems = [
   .main-content.content-shifted {
     margin-left: 0; /* Don't push content on mobile, just overlay */
   }
+  
+  .content-wrapper {
+    padding: 1rem;
+  }
 
   .close-sidebar-btn {
     display: block;
