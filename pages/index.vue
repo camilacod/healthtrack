@@ -48,7 +48,8 @@
           <div class="feature-card">
             <div class="icon-box">🔍</div>
             <h3>Search Database</h3>
-            <div class="phone-mini"></div>
+            <img src="/images/feature2.png" alt="Search Database" class="feature-phone-img" />
+            <!-- <div class="phone-mini"></div> -->
           </div>
         
         </div>
@@ -369,7 +370,8 @@
 
 .feature-phone-img {
   width: 140px;
-  height: auto;
+  height: 280px; /* Fixed height to match content */
+  object-fit: cover; /* Ensures image fills the height without distortion */
   border-radius: 12px;
   margin-top: auto;
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
