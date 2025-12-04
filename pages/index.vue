@@ -8,7 +8,7 @@
         </div>
         <div class="nav-links">
           <a href="#features">Features</a>
-          <a href="#stacks">Stacks</a>
+          <a href="#stacks">How It Works</a>
           <a href="#resources">Resources</a>
         </div>
         <div class="nav-actions">
@@ -51,35 +51,62 @@
             <img src="/images/feature2.png" alt="Search Database" class="feature-phone-img" />
             <!-- <div class="phone-mini"></div> -->
           </div>
+
+          <div class="feature-card">
+            <div class="icon-box">🗓️</div>
+            <h3>Plan Your Days</h3>
+            <img src="/images/feature3.png" alt="Plan Your Days" class="feature-phone-img" />
+          </div>
         
         </div>
       </div>
     </section>
 
-    <!-- Stack Builder Section -->
-    <section id="stacks" class="stacks-section">
-      <div class="container stacks-container">
-        <div class="stacks-info">
-          <h2>Supplement Stack Builder</h2>
-          <p>Group your supplements into "stacks" based on goals and unlock deep insights into what you put in your body. Coming soon: get your StackScore™ analysis.</p>
-          <ul class="check-list">
-            <li>✅ General Wellness</li>
-            <li>✅ Longevity & Healthy Aging</li>
-            <li>✅ Sleep Optimization</li>
-            <li>✅ Mental Focus & Cognitive Improvement</li>
-            <li>✅ Athletic Performance & Recovery</li>
-            <li>✅ Stress Management & Adaptation</li>
-            <li>✅ Weight Management</li>
-          </ul>
-        </div>
-        <div class="stacks-image">
-          <div class="phone-mockup right">
-             <div class="mockup-screen">
-               <div class="stack-item">🌞 General Wellness</div>
-               <div class="stack-item">⚡ Focus</div>
-               <div class="stack-item">💤 Sleep</div>
-             </div>
+    <!-- How It Works Section -->
+    <section id="stacks" class="how-it-works-section">
+      <div class="container">
+        <h2 class="section-title">Your Journey to Better Health</h2>
+        <p class="section-subtitle">From bottle to habit in four simple steps</p>
+        
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <div class="step-icon">📸</div>
+            <h3>Snap & Recognize</h3>
+            <p>Point your camera at any supplement bottle. Our AI instantly identifies the product and extracts all the details.</p>
           </div>
+
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <div class="step-icon">✨</div>
+            <h3>Request & Expand</h3>
+            <p>Don't see your supplement? Submit it for review. Help build the largest community-driven supplement database.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <div class="step-icon">⚙️</div>
+            <h3>Configure & Schedule</h3>
+            <p>Set your perfect routine. Choose days, times, and reminders. Morning multivitamin? Evening magnesium? You decide.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">4</div>
+            <div class="step-icon">📊</div>
+            <h3>Track & Thrive</h3>
+            <p>Check off your daily doses. Watch your streak grow. Stay consistent and see your progress over time.</p>
+          </div>
+        </div>
+
+        <div class="cta-banner">
+          <div class="cta-content">
+            <span class="cta-emoji">💊</span>
+            <div class="cta-text">
+              <h3>Your supplements deserve better than a forgotten bottle in the cabinet.</h3>
+              <p>Start tracking today. Stay consistent. Feel the difference.</p>
+            </div>
+          </div>
+          <NuxtLink to="/signup" class="btn-cta">Get Started Free</NuxtLink>
         </div>
       </div>
     </section>
@@ -383,47 +410,144 @@
   transform: translateY(-5px);
 }
 
-/* Stacks */
-.stacks-section {
-  padding: 4rem 0;
+/* How It Works */
+.how-it-works-section {
+  padding: 5rem 0;
 }
-.stacks-container {
+
+.section-subtitle {
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 1.15rem;
+  margin-top: -2rem;
+  margin-bottom: 3rem;
+}
+
+.steps-grid {
   display: grid;
-  gap: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
 }
-@media (min-width: 992px) {
-  .stacks-container {
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
+
+.step-card {
+  background: white;
+  padding: 2rem 1.5rem;
+  border-radius: 20px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-.stacks-info h2 {
-  font-size: 2.5rem;
-  color: var(--primary);
-  line-height: 1.1;
+
+.step-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.step-number {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  background: var(--secondary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.step-icon {
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
-.check-list {
-  list-style: none;
-  padding: 0;
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.8rem;
+
+.step-card h3 {
+  font-size: 1.2rem;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
 }
-@media (min-width: 600px) {
-  .check-list {
-    grid-template-columns: 1fr 1fr;
+
+.step-card p {
+  color: var(--text-sub);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* CTA Banner */
+.cta-banner {
+  background: linear-gradient(135deg, var(--primary) 0%, #1a3a5c 100%);
+  border-radius: 24px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cta-banner {
+    flex-direction: row;
+    text-align: left;
+    justify-content: space-between;
+    padding: 2.5rem 3rem;
   }
 }
-.stack-item {
-  width: 80%;
-  padding: 10px;
-  background: #f0f0f0;
-  margin: 5px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
+
+.cta-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .cta-content {
+    justify-content: flex-start;
+  }
+}
+
+.cta-emoji {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.cta-text h3 {
+  color: white;
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.cta-text p {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-size: 1rem;
+}
+
+.btn-cta {
+  background: var(--secondary);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-cta:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* FAQ */

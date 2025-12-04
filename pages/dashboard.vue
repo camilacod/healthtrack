@@ -189,7 +189,7 @@ onMounted(() => loadDashboard())
       <p class="subtitle">Track your daily supplement intake</p>
     </header>
 
-    <div v-if="loading && !doses.length" class="loading-state">Loading...</div>
+    <div v-if="loading && !doses.length" class="loading-state">Loading your data...</div>
     <p v-if="error" class="error-msg">{{ error }}</p>
 
     <!-- Stats Cards -->

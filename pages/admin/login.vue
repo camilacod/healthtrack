@@ -42,7 +42,7 @@ async function submit() {
         <p v-if="error" class="error-msg">{{ error }}</p>
         
         <div class="back-link">
-           <NuxtLink to="/login">Back to User Login</NuxtLink>
+           <NuxtLink to="/">Back to Home</NuxtLink>
         </div>
       </div>
     </div>
