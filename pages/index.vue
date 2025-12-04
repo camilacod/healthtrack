@@ -139,6 +139,7 @@
   color: var(--text-main);
   background-color: var(--bg-cream);
 }
+/* ... */
 
 .container {
   max-width: 1200px;
