@@ -106,7 +106,7 @@ async function submitBrandVersion() {
 
     <div class="actions">
       <button class="btn btn-primary" :disabled="!imagePreview || loading" @click="savePhoto">
-        {{ loading ? 'Analyzing...' : 'Use this Photo' }}
+        {{ loading ? 'Analyzing...' : 'Recognize Product' }}
       </button>
       <NuxtLink to="/dashboard" class="btn btn-text">Cancel</NuxtLink>
     </div>
@@ -266,6 +266,7 @@ async function submitBrandVersion() {
   text-decoration: none;
   display: inline-block;
   margin-top: 1rem;
+  text-align: center;
 }
 
 .error-msg {

@@ -8,6 +8,16 @@ definePageMeta({
 const supplements = ref<any[]>([])
 const error = ref('')
 const searchQuery = ref('')
+const selectedCategory = ref<string | null>(null)
+
+const CATEGORIES = [
+  'Multivitamins',
+  'Single Vitamins',
+  'Minerals',
+  'Functional Supplements',
+  'Antioxidants',
+  'Others',
+]
 
 async function load() {
   try {
@@ -19,12 +29,28 @@ async function load() {
 
 // Filter logic
 const filteredSupplements = computed(() => {
-  if (!searchQuery.value) return supplements.value
-  const q = searchQuery.value.toLowerCase()
-  return supplements.value.filter(s => 
-    s.name.toLowerCase().includes(q) || 
-    (s.brand && s.brand.toLowerCase().includes(q))
-  )
+  let result = supplements.value
+
+  // Filter by category
+  if (selectedCategory.value) {
+    if (selectedCategory.value === 'Others') {
+      // "Others" includes items with null category or explicitly "Others"
+      result = result.filter(s => !s.category || s.category === 'Others')
+    } else {
+      result = result.filter(s => s.category === selectedCategory.value)
+    }
+  }
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      (s.brand && s.brand.toLowerCase().includes(q))
+    )
+  }
+
+  return result
 })
 
 // Suggestions: simple unique names from filtered results
@@ -35,8 +61,9 @@ const suggestions = computed(() => {
   return Array.from(names).slice(0, 5) // Limit to 5
 })
 
-// Categories: hardcoded or derived
-const categories = ['Vitamins', 'Minerals', 'Protein', 'Herbal']
+function selectCategory(cat: string | null) {
+  selectedCategory.value = selectedCategory.value === cat ? null : cat
+}
 
 async function add(s: any) {
   try {
@@ -87,12 +114,25 @@ onMounted(load)
           </ul>
         </div>
 
-        <!-- Categories (Static for now) -->
+        <!-- Categories -->
         <div class="panel-group">
           <h3 class="panel-title">Categories</h3>
           <ul class="panel-list">
-            <li v-for="cat in categories" :key="cat" class="panel-item">
+            <li 
+              v-for="cat in CATEGORIES" 
+              :key="cat" 
+              class="panel-item"
+              :class="{ active: selectedCategory === cat }"
+              @click="selectCategory(cat)"
+            >
               {{ cat }}
+            </li>
+            <li 
+              v-if="selectedCategory"
+              class="panel-item clear-filter"
+              @click="selectCategory(null)"
+            >
+              ✕ Clear filter
             </li>
           </ul>
         </div>
@@ -122,13 +162,11 @@ onMounted(load)
                 {{ s.form }} • {{ s.servingSize }} {{ s.servingUnit }}
               </div>
 
-              <div class="rating-mock">
-                <span class="stars">★★★★☆</span>
-                <span class="review-count">(12)</span>
+              <div class="product-category">
+                {{ s.category || 'Others' }}
               </div>
               
               <div class="action-row">
-                <!-- <span class="price">$29.99</span> Mock price -->
                 <button class="btn-add" @click="add(s)">Add to Stack</button>
               </div>
             </div>
@@ -260,16 +298,39 @@ onMounted(load)
 }
 
 .panel-item {
-  padding: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
   color: var(--text-main);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s;
   font-weight: 500;
+  border-radius: 6px;
+  margin: 0 -0.75rem;
 }
 
 .panel-item:hover {
   color: var(--secondary);
-  text-decoration: underline;
+  background: #fef3e8;
+}
+
+.panel-item.active {
+  background: var(--secondary);
+  color: white;
+}
+
+.panel-item.active:hover {
+  background: var(--secondary);
+  color: white;
+}
+
+.panel-item.clear-filter {
+  color: var(--text-sub);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.panel-item.clear-filter:hover {
+  color: #b91c1c;
+  background: #fef2f2;
 }
 
 .panel-empty {
@@ -362,21 +423,14 @@ onMounted(load)
   margin-bottom: 0.5rem;
 }
 
-.rating-mock {
-  display: flex;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-  align-items: center;
-}
-
-.stars {
-  color: #fbbf24; /* Amber/Gold */
-  letter-spacing: -2px;
-}
-
-.review-count {
-  color: #999;
+.product-category {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--secondary);
+  background: #fef3e8;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  margin-bottom: 0.75rem;
 }
 
 .action-row {

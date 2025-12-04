@@ -69,7 +69,7 @@ const filteredSupplements = computed(() => {
               <th>Serving Size</th>
               <th>Unit</th>
               <th>Category</th>
-              <th>Description</th>
+              <!-- <th>Description</th> -->
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@ const filteredSupplements = computed(() => {
               <td>{{ s.servingSize || '-' }}</td>
               <td>{{ s.servingUnit || '-' }}</td>
               <td>{{ s.category || '-' }}</td>
-              <td class="cell-description">{{ s.description || '-' }}</td>
+              <!-- <td class="cell-description">{{ s.description || '-' }}</td> -->
             </tr>
           </tbody>
         </table>

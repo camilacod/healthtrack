@@ -1,8 +1,12 @@
-import { addUserSupplementRepo, countSupplementsRepo, listSupplementsRepo } from '../repositories/supplementRepository'
+import { addUserSupplementRepo, countSupplementsRepo, countSupplementsByStatusRepo, listSupplementsRepo } from '../repositories/supplementRepository'
 
 export async function countSupplements() {
   const count = await countSupplementsRepo()
   return { count }
+}
+
+export async function countSupplementsByStatus() {
+  return await countSupplementsByStatusRepo()
 }
 
 export async function listSupplements() {

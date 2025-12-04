@@ -8,6 +8,15 @@ export const supplementStatusEnum = pgEnum('supplement_status', [
   'rejected',
 ])
 
+export const supplementCategoryEnum = pgEnum('supplement_category', [
+  'Multivitamins',
+  'Single Vitamins',
+  'Minerals',
+  'Functional Supplements',
+  'Antioxidants',
+  'Others',
+])
+
 export const userSuppRelationEnum = pgEnum('user_supp_relation', [
   'added',
   'uses',
@@ -38,6 +47,7 @@ export const supplements = pgTable('supplements', {
   servingSize: text('serving_size'), // numeric in SQL; keep as text for simplicity here
   servingUnit: text('serving_unit'),
   perServing: jsonb('per_serving'),
+  category: supplementCategoryEnum('category'),
   status: supplementStatusEnum('status').notNull().default('draft'),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -123,6 +133,8 @@ export const dailySummaries = pgTable('daily_summaries', {
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Admin = typeof admins.$inferSelect
+export type Supplement = typeof supplements.$inferSelect
+export type SupplementCategory = 'Multivitamins' | 'Single Vitamins' | 'Minerals' | 'Functional Supplements' | 'Antioxidants' | 'Others'
 export type SupplementSchedule = typeof supplementSchedules.$inferSelect
 export type ScheduleDay = typeof scheduleDays.$inferSelect
 export type ScheduleTime = typeof scheduleTimes.$inferSelect

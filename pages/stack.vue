@@ -13,6 +13,7 @@ type StackItem = {
   serving_size: string | null
   serving_unit: string | null
   per_serving: any
+  category: string | null
   status: string
 }
 
@@ -29,6 +30,16 @@ const schedules = ref<Record<number, Schedule>>({})
 const loading = ref(false)
 const error = ref('')
 const q = ref('')
+const selectedCategory = ref<string | null>(null)
+
+const CATEGORIES = [
+  'Multivitamins',
+  'Single Vitamins',
+  'Minerals',
+  'Functional Supplements',
+  'Antioxidants',
+  'Others',
+]
 
 // Modal state
 const modalOpen = ref(false)
@@ -64,11 +75,26 @@ const HOURS = Array.from({ length: 20 }, (_, i) => {
 })
 
 const filtered = computed(() => {
-  if (!q.value) return items.value
+  let result = items.value
+
+  // Filter by category
+  if (selectedCategory.value) {
+    if (selectedCategory.value === 'Others') {
+      result = result.filter(i => !i.category || i.category === 'Others')
+    } else {
+      result = result.filter(i => i.category === selectedCategory.value)
+    }
+  }
+
+  // Filter by search query
+  if (q.value) {
   const s = q.value.toLowerCase()
-  return items.value.filter(i =>
+    result = result.filter(i =>
     i.name.toLowerCase().includes(s) || (i.brand && i.brand.toLowerCase().includes(s)) || (i.form && i.form.toLowerCase().includes(s))
   )
+  }
+
+  return result
 })
 
 const canSave = computed(() => selectedDays.value.length > 0 && selectedTimes.value.length > 0)
@@ -231,6 +257,10 @@ onMounted(load)
 
     <div class="search-row">
       <input v-model="q" placeholder="Search by name or brand..." class="search-input" />
+      <select v-model="selectedCategory" class="category-filter">
+        <option :value="null">All Categories</option>
+        <option v-for="cat in CATEGORIES" :key="cat" :value="cat">{{ cat }}</option>
+      </select>
       <span class="result-count">{{ filtered.length }} items</span>
     </div>
 
@@ -248,6 +278,7 @@ onMounted(load)
               <span v-if="item.form">{{ item.form }}</span>
               <span v-if="item.serving_size && item.serving_unit"> • {{ item.serving_size }} {{ item.serving_unit }}</span>
             </p>
+            <span class="category-badge">{{ item.category || 'Others' }}</span>
 
             <div v-if="item.per_serving" class="per-serving">
               <p class="per-serving-label">Per serving</p>
@@ -450,7 +481,23 @@ onMounted(load)
 
 .search-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--secondary);
+}
+
+.category-filter {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.category-filter:focus {
+  outline: none;
+  border-color: var(--secondary);
 }
 
 .result-count { color: var(--text-sub); }
@@ -512,7 +559,17 @@ onMounted(load)
 .supplement-meta { 
   color: var(--text-sub); 
   font-size: 0.85rem; 
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
+}
+
+.category-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--secondary);
+  background: #fef3e8;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  margin-bottom: 0.75rem;
 }
 
 .per-serving { margin-bottom: 1rem; }
@@ -925,6 +982,16 @@ onMounted(load)
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  .search-row {
+    flex-wrap: wrap;
+  }
+
+  .search-input,
+  .category-filter {
+    width: 100%;
+    min-width: unset;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }

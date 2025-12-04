@@ -5,7 +5,7 @@ definePageMeta({
   layout: 'admin'
 })
 
-const summary = ref<{ users: number; supplements: number } | null>(null)
+const summary = ref<{ users: number; supplements: { total: number; pending: number; published: number; rejected: number } } | null>(null)
 const me = ref<any>(null)
 
 async function load() {
@@ -45,8 +45,29 @@ onMounted(async () => {
       <div class="card stat-card">
         <div class="stat-icon">💊</div>
         <div class="stat-info">
-          <div class="stat-title">Supplements</div>
-          <div class="stat-value">{{ summary?.supplements ?? 0 }}</div>
+          <div class="stat-title">Total Supplements</div>
+          <div class="stat-value">{{ summary?.supplements?.total ?? 0 }}</div>
+        </div>
+      </div>
+      <div class="card stat-card stat-pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-info">
+          <div class="stat-title">Pending</div>
+          <div class="stat-value">{{ summary?.supplements?.pending ?? 0 }}</div>
+        </div>
+      </div>
+      <div class="card stat-card stat-published">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <div class="stat-title">Published</div>
+          <div class="stat-value">{{ summary?.supplements?.published ?? 0 }}</div>
+        </div>
+      </div>
+      <div class="card stat-card stat-rejected">
+        <div class="stat-icon">❌</div>
+        <div class="stat-info">
+          <div class="stat-title">Rejected</div>
+          <div class="stat-value">{{ summary?.supplements?.rejected ?? 0 }}</div>
         </div>
       </div>
     </section>
@@ -198,6 +219,18 @@ onMounted(async () => {
   font-weight: 600;
   color: var(--primary);
   text-align: center;
+}
+
+.stat-pending .stat-value {
+  color: #f59e0b;
+}
+
+.stat-published .stat-value {
+  color: #10b981;
+}
+
+.stat-rejected .stat-value {
+  color: #ef4444;
 }
 
 @media (max-width: 600px) {
