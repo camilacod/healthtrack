@@ -21,7 +21,7 @@ const CATEGORIES = [
 
 async function load() {
   try {
-    supplements.value = (await $fetch('/api/supplements')) as any[]
+    supplements.value = (await $fetch(`/api/supplements?_t=${Date.now()}`)) as any[]
   } catch (e: any) {
     error.value = e?.data?.message || 'Error loading data'
   }

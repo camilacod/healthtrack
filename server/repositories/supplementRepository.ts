@@ -26,19 +26,14 @@ export async function countSupplementsByStatusRepo(): Promise<{ total: number; p
 }
 
 export async function listSupplementsRepo() {
-  return await db
-    .select({
-      id: supplements.id,
-      name: supplements.name,
-      brand: supplements.brand,
-      form: supplements.form,
-      servingSize: supplements.servingSize,
-      servingUnit: supplements.servingUnit,
-      category: supplements.category,
-      status: supplements.status,
-    })
-    .from(supplements)
-    .limit(100)
+  const rows = await db.execute(
+    sql`SELECT id, name, brand, form, serving_size as "servingSize", serving_unit as "servingUnit", category, status
+        FROM supplements
+        WHERE status = 'published'
+        ORDER BY created_at DESC
+        LIMIT 100`
+  )
+  return (rows as any)?.rows ?? []
 }
 
 export async function addUserSupplementRepo(

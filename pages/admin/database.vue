@@ -11,7 +11,7 @@ const searchQuery = ref('')
 
 async function load() {
   try {
-    supplements.value = (await $fetch('/api/supplements')) as any[]
+    supplements.value = (await $fetch(`/api/admin/supplements?_t=${Date.now()}`)) as any[]
   } catch (e: any) {
     console.error('Error loading supplements:', e)
   }
@@ -69,7 +69,7 @@ const filteredSupplements = computed(() => {
               <th>Serving Size</th>
               <th>Unit</th>
               <th>Category</th>
-              <!-- <th>Description</th> -->
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -79,8 +79,10 @@ const filteredSupplements = computed(() => {
               <td>{{ s.form || '-' }}</td>
               <td>{{ s.servingSize || '-' }}</td>
               <td>{{ s.servingUnit || '-' }}</td>
-              <td>{{ s.category || '-' }}</td>
-              <!-- <td class="cell-description">{{ s.description || '-' }}</td> -->
+              <td>{{ s.category || 'Others' }}</td>
+              <td>
+                <span class="status-badge" :class="s.status">{{ s.status }}</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -196,6 +198,35 @@ td {
   text-align: center;
   padding: 3rem;
   color: var(--text-sub);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.published {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.draft {
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 @media (max-width: 768px) {
