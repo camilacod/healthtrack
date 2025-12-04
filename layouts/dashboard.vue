@@ -17,7 +17,7 @@ async function logout() {
 
 const menuItems = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { label: 'My Stack', path: '/dashboard', icon: '💊' }, /* For now pointing to dashboard until pages exist */
+  { label: 'My Stack', path: '/stack', icon: '💊' },
   { label: 'Database', path: '/database', icon: '🔍' },
   { label: 'Settings', path: '/dashboard', icon: '⚙️' },
 ]

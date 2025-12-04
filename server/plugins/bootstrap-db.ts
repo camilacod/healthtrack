@@ -13,8 +13,17 @@ do $$ begin
     create type supplement_status as enum ('draft','pending','published','rejected');
   end if;
   if not exists (select 1 from pg_type where typname = 'user_supp_relation') then
-    create type user_supp_relation as enum ('added','uses','favorite');
+    create type user_supp_relation as enum ('added','uses','favorite','submitted');
   end if;
+end $$;
+
+-- Ensure enum contains new values when type already exists
+do $$ begin
+  begin
+    alter type user_supp_relation add value if not exists 'submitted';
+  exception when others then
+    null;
+  end;
 end $$;
 
 -- ============================

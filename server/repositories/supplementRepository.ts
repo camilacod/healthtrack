@@ -1,5 +1,5 @@
 import { db } from '../utils/db'
-import { supplements } from '../db/schema'
+import { supplements, userSupplements } from '../db/schema'
 import { sql } from 'drizzle-orm'
 
 export async function countSupplementsRepo(): Promise<number> {
@@ -10,16 +10,146 @@ export async function countSupplementsRepo(): Promise<number> {
 
 export async function listSupplementsRepo() {
   return await db
-    .select({ id: supplements.id, name: supplements.name, brand: supplements.brand, status: supplements.status })
+    .select({
+      id: supplements.id,
+      name: supplements.name,
+      brand: supplements.brand,
+      form: supplements.form,
+      servingSize: supplements.servingSize,
+      servingUnit: supplements.servingUnit,
+      status: supplements.status,
+    })
     .from(supplements)
     .limit(100)
 }
 
-export async function addUserSupplementRepo(userId: string, supplementId: number, relation: 'added' | 'uses' | 'favorite') {
+export async function addUserSupplementRepo(
+  userId: string,
+  supplementId: number,
+  relation: 'added' | 'uses' | 'favorite' | 'submitted'
+) {
   // raw SQL to upsert unique(user_id, supplement_id, relation)
   const q = sql`insert into user_supplements (user_id, supplement_id, relation)
                values (${userId}, ${supplementId}, ${relation})
                on conflict (user_id, supplement_id, relation) do nothing`
   await db.execute(q)
   return { ok: true }
+}
+
+export async function findSupplementsByLooseNameBrand(name: string, brand?: string | null, limit = 20) {
+  const nameLike = `%${name}%`
+  const brandLike = brand ? `%${brand}%` : null
+  const rows = await db.execute(
+    sql`select id, name, brand, status
+        from ${supplements}
+        where lower(name) like lower(${nameLike})
+          ${brandLike ? sql` or (brand is not null and lower(brand) like lower(${brandLike}))` : sql``}
+        limit ${limit}`
+  )
+  return (rows as any)?.rows ?? []
+}
+
+export async function createPendingSupplementRepo(input: {
+  name: string
+  brand?: string | null
+  form?: string | null
+  createdBy: string
+}) {
+  const q = db
+    .insert(supplements)
+    .values({
+      name: input.name,
+      brand: input.brand ?? null,
+      form: input.form ?? null,
+      // leave servingSize, servingUnit, perServing null on purpose
+      status: 'pending' as any,
+      createdBy: input.createdBy,
+    })
+    .returning({ id: supplements.id })
+  const [row] = await q
+  return row
+}
+
+export async function listPendingSupplementsRepo(limit = 100) {
+  const rows = await db
+    .select({
+      id: supplements.id,
+      name: supplements.name,
+      brand: supplements.brand,
+      form: supplements.form,
+      status: supplements.status,
+      createdAt: supplements.createdAt,
+    })
+    .from(supplements)
+    // @ts-ignore drizzle enum typed values
+    .where(sql`${supplements.status} = 'pending'`)
+    .orderBy(sql`${supplements.createdAt} desc`)
+    .limit(limit)
+  return rows
+}
+
+export async function publishSupplementRepo(id: number, adminId: string) {
+  const res = await db.execute(
+    sql`update ${supplements}
+        set status = 'published', reviewed_by = ${adminId}::uuid, reviewed_at = now()
+        where id = ${id}::bigint`
+  )
+  return (res as any)?.rowCount > 0
+}
+
+export async function rejectSupplementRepo(id: number, adminId: string, notes?: string | null) {
+  const res = await db.execute(
+    sql`update ${supplements}
+        set status = 'rejected', reviewed_by = ${adminId}::uuid, reviewed_at = now(), review_notes = ${notes ?? null}
+        where id = ${id}::bigint`
+  )
+  return (res as any)?.rowCount > 0
+}
+
+export async function updateSubmittedRelationsToUsesRepo(supplementId: number) {
+  const res = await db.execute(
+    sql`update user_supplements set relation = 'uses'
+        where supplement_id = ${supplementId}::bigint and relation = 'submitted'`
+  )
+  return (res as any)?.rowCount ?? 0
+}
+
+export async function listUserSupplementsUsesRepo(userId: string) {
+  const rows = await db.execute(
+    sql`select s.id, s.name, s.brand, s.form, s.serving_size, s.serving_unit, s.per_serving, s.status
+        from ${userSupplements} us
+        join ${supplements} s on s.id = us.supplement_id
+        where us.user_id = ${userId}::uuid and us.relation = 'uses'
+        order by s.created_at desc`
+  )
+  return (rows as any)?.rows ?? []
+}
+
+export async function updateSupplementDetailsRepo(
+  id: number,
+  input: {
+    name?: string
+    brand?: string | null
+    form?: string | null
+    servingSize?: string | number | null
+    servingUnit?: string | null
+    perServing?: any
+  }
+) {
+  const payload: Record<string, any> = {}
+  if (typeof input.name !== 'undefined') payload.name = input.name
+  if (typeof input.brand !== 'undefined') payload.brand = input.brand
+  if (typeof input.form !== 'undefined') payload.form = input.form
+  if (typeof input.servingSize !== 'undefined') payload.servingSize = input.servingSize === null ? null : String(input.servingSize)
+  if (typeof input.servingUnit !== 'undefined') payload.servingUnit = input.servingUnit
+  if (typeof input.perServing !== 'undefined') payload.perServing = input.perServing
+
+  if (Object.keys(payload).length === 0) return { ok: true }
+
+  const q = db
+    .update(supplements)
+    .set(payload as any)
+    .where(sql`${supplements.id} = ${id}`)
+  const res = await q
+  return { ok: (res as any)?.rowCount > 0 }
 }

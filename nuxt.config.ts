@@ -16,5 +16,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private runtime config, available server-side
     sessionSecret: '',
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
   }
 })

@@ -7,6 +7,14 @@ definePageMeta({
 
 const imagePreview = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const selectedFile = ref<File | null>(null)
+const loading = ref(false)
+const error = ref('')
+
+type VisionMatch = { status: 'match'; match: { id: number; name: string; brand: string | null; status: string }; score: number }
+type VisionPending = { status: 'pending'; supplementId: number; product: { name: string; brand: string | null; form: string | null } }
+type VisionNone = { status: 'no_match'; items: any[] }
+const visionResult = ref<VisionMatch | VisionPending | VisionNone | null>(null)
 
 function triggerCamera() {
   fileInput.value?.click()
@@ -16,6 +24,7 @@ function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
     const file = target.files[0]
+    selectedFile.value = file
     const reader = new FileReader()
     reader.onload = (e) => {
       imagePreview.value = e.target?.result as string
@@ -24,10 +33,32 @@ function handleFileChange(event: Event) {
   }
 }
 
-function savePhoto() {
-  // Placeholder for future logic
-  alert('Photo saved! (Logic to be implemented)')
-  navigateTo('/dashboard')
+async function savePhoto() {
+  error.value = ''
+  if (!selectedFile.value) {
+    error.value = 'Please select a photo first.'
+    return
+  }
+  loading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('image', selectedFile.value, selectedFile.value.name || 'photo.jpg')
+    const res = await $fetch('/api/vision/supplement', { method: 'POST', body: fd })
+    visionResult.value = res as any
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Failed to analyze photo'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function confirmAddToStack(supplementId: number) {
+  try {
+    await $fetch('/api/user/supplements', { method: 'POST', body: { supplementId, relation: 'uses' } })
+    navigateTo('/dashboard')
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Failed to add to stack'
+  }
 }
 </script>
 
@@ -61,8 +92,50 @@ function savePhoto() {
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" :disabled="!imagePreview" @click="savePhoto">Use this Photo</button>
+      <button class="btn btn-primary" :disabled="!imagePreview || loading" @click="savePhoto">
+        {{ loading ? 'Analyzing...' : 'Use this Photo' }}
+      </button>
       <NuxtLink to="/dashboard" class="btn btn-text">Cancel</NuxtLink>
+    </div>
+
+    <p v-if="error" class="error-msg">{{ error }}</p>
+
+    <!-- Result Cards -->
+    <div v-if="visionResult" class="result-card">
+      <!-- Match proposal -->
+      <template v-if="visionResult.status === 'match'">
+        <h2 class="result-title">We found a match</h2>
+        <div class="result-item">
+          <div class="result-name">{{ visionResult.match.name }}</div>
+          <div class="result-meta">Brand: {{ visionResult.match.brand || '-' }}</div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-primary" @click="confirmAddToStack(visionResult.match.id)">Add to My Stack</button>
+          <NuxtLink to="/dashboard" class="btn btn-text">Cancel</NuxtLink>
+        </div>
+      </template>
+
+      <!-- Pending creation -->
+      <template v-else-if="visionResult.status === 'pending'">
+        <h2 class="result-title">Submitted for Review</h2>
+        <div class="result-item">
+          <div class="result-name">{{ visionResult.product.name }}</div>
+          <div class="result-meta">Brand: {{ visionResult.product.brand || '-' }}</div>
+        </div>
+        <p class="disclaimer">
+          Our team will evaluate your product request. Once approved,
+          it will appear in your Stack automatically.
+        </p>
+        <div class="result-actions">
+          <NuxtLink to="/dashboard" class="btn btn-primary">Got it</NuxtLink>
+        </div>
+      </template>
+
+      <!-- Nothing identifiable -->
+      <template v-else>
+        <h2 class="result-title">We couldn’t identify a product</h2>
+        <p class="disclaimer">Try a clearer front-facing photo of the label.</p>
+      </template>
     </div>
   </div>
 </template>
@@ -165,6 +238,44 @@ function savePhoto() {
   margin-top: 1rem;
 }
 
+.error-msg {
+  color: #b00020;
+  margin-top: 1rem;
+}
+
+.result-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.result-title {
+  color: var(--primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.result-name {
+  font-weight: 700;
+}
+
+.result-meta {
+  color: var(--text-sub);
+}
+
+.result-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .btn-retake {
   background: white;
   border: 1px solid #ddd;
@@ -179,4 +290,3 @@ function savePhoto() {
   gap: 0.5rem;
 }
 </style>
-

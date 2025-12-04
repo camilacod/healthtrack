@@ -12,6 +12,7 @@ export const userSuppRelationEnum = pgEnum('user_supp_relation', [
   'added',
   'uses',
   'favorite',
+  'submitted',
 ])
 
 export const users = pgTable('users', {
