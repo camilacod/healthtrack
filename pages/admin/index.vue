@@ -1,17 +1,15 @@
 <script setup lang="ts">
-const users = ref<any[]>([])
-const admins = ref<any[]>([])
+import { ref, onMounted } from 'vue'
+
+definePageMeta({
+  layout: 'admin'
+})
+
 const summary = ref<{ users: number; supplements: number } | null>(null)
 const me = ref<any>(null)
 
-async function refreshAll() {
-  const [u, a, s] = await Promise.all([
-    $fetch('/api/users'),
-    $fetch('/api/admins'),
-    $fetch('/api/admin/summary'),
-  ])
-  users.value = u as any[]
-  admins.value = a as any[]
+async function load() {
+  const s = await $fetch('/api/admin/summary')
   summary.value = s as any
 }
 
@@ -22,203 +20,117 @@ onMounted(async () => {
       navigateTo('/admin/login')
       return
     }
-    await refreshAll()
+    await load()
   } catch {
     navigateTo('/admin/login')
   }
 })
-
-
-const editing = reactive<Record<string, { email: string; username: string }>>({})
-function startEdit(u: any) {
-  editing[u.id] = { email: u.email, username: u.username || '' }
-}
-
-async function saveEdit(id: string) {
-  const payload = editing[id]
-  await $fetch(`/api/users/${id}`, { method: 'PUT', body: payload })
-  delete editing[id]
-  await refreshAll()
-}
-
-async function removeUser(id: string) {
-  if (!confirm('Delete user?')) return
-  await $fetch(`/api/users/${id}`, { method: 'DELETE' })
-  await refreshAll()
-}
-
-function isAdmin(userId: string) {
-  return admins.value.some((a) => a.userId === userId)
-}
-
-async function addAdmin(userId: string) {
-  await $fetch('/api/admins', { method: 'POST', body: { userId } })
-  await refreshAll()
-}
-
-async function removeAdmin(userId: string) {
-  await $fetch(`/api/admins/${userId}`, { method: 'DELETE' })
-  await refreshAll()
-}
-
-function cancelEdit(id: string) {
-  delete editing[id]
-}
-
-
-/* Unused imports removed */
 </script>
 
 <template>
-  <div class="admin-dashboard">
-    <div class="container">
-      <header class="header-row">
-        <div class="header-left">
-          <!-- <img src="/images/logo.png" alt="Logo" class="header-logo" /> -->
-          <h1 class="title">Admin Dashboard</h1>
-        </div>
-        <NuxtLink class="back-link" to="/">Back to Home</NuxtLink>
-      </header>
+  <div class="admin-home">
+    <header class="page-header">
+      <h1 class="page-title">Admin Dashboard</h1>
+      <p class="welcome-text">Welcome back! Here's your system overview.</p>
+    </header>
 
-      <section class="stats-grid">
-        <div class="card stat-card">
-          <div class="stat-title">Users</div>
-          <div class="stat-value">{{ summary?.users ?? users.length }}</div>
+    <section class="stats-grid">
+      <div class="card stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+          <div class="stat-title">Total Users</div>
+          <div class="stat-value">{{ summary?.users ?? 0 }}</div>
         </div>
-        <div class="card stat-card">
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon">💊</div>
+        <div class="stat-info">
           <div class="stat-title">Supplements</div>
           <div class="stat-value">{{ summary?.supplements ?? 0 }}</div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="card table-card">
-        <h2 class="section-title">User Management</h2>
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Email</th>
-                <th>Username</th>
-                <th>Created</th>
-                <th>Admin</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="u in users" :key="u.id">
-                <td class="cell-id" :title="u.id">
-                  {{ u.id }}
-                </td>
-                <td>
-                  <template v-if="editing[u.id]">
-                    <input class="input" v-model="editing[u.id]!.email" />
-                  </template>
-                  <template v-else>{{ u.email }}</template>
-                </td>
-                <td>
-                  <template v-if="editing[u.id]">
-                    <input class="input" v-model="editing[u.id]!.username" />
-                  </template>
-                  <template v-else>{{ u.username }}</template>
-                </td>
-                <td>{{ new Date(u.createdAt).toLocaleDateString() }}</td>
-                <td>
-                  <span v-if="isAdmin(u.id)" class="badge-admin">Yes</span>
-                  <span v-else class="badge-user">No</span>
-                </td>
-                <td class="actions-cell">
-                  <div class="toolbar">
-                    <template v-if="editing[u.id]">
-                      <button class="btn btn-primary btn-sm" @click="saveEdit(u.id)">Save</button>
-                      <button class="btn btn-secondary btn-sm" @click="cancelEdit(u.id)">Cancel</button>
-                    </template>
-                    <template v-else>
-                      <button class="btn btn-primary btn-sm" @click="startEdit(u)">Edit</button>
-                      <button class="btn btn-danger btn-sm" @click="removeUser(u.id)">Delete</button>
-                    </template>
-                    
-                    <div class="admin-actions">
-                       <template v-if="!isAdmin(u.id)">
-                        <button class="btn btn-outline btn-sm btn-fixed-width" @click="addAdmin(u.id)">Make Admin</button>
-                      </template>
-                      <template v-else>
-                        <button class="btn btn-secondary btn-sm btn-fixed-width" @click="removeAdmin(u.id)">Remove Admin</button>
-                      </template>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <section class="card quick-links-card">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="links-grid">
+        <NuxtLink to="/admin/users" class="quick-link">
+          <span class="link-icon">👥</span>
+          <span class="link-label">Manage Users</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/database" class="quick-link">
+          <span class="link-icon">💊</span>
+          <span class="link-label">View Database</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/products" class="quick-link">
+          <span class="link-icon">✨</span>
+          <span class="link-label">Curate Products</span>
+        </NuxtLink>
+        <NuxtLink to="/" class="quick-link">
+          <span class="link-icon">🏠</span>
+          <span class="link-label">Back to Site</span>
+        </NuxtLink>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.admin-dashboard {
-  background-color: var(--bg-cream);
-  min-height: 100vh;
-  padding: 2rem 1rem;
-  font-family: system-ui, -apple-system, sans-serif;
-  color: var(--text-main);
-}
-
-.container {
+.admin-home {
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
 }
 
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
+.page-header {
+  margin-bottom: 2rem;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.header-logo {
-  height: 40px;
-  width: auto;
-}
-
-.title {
-  font-size: 1.8rem;
+.page-title {
+  font-size: 2rem;
+  color: var(--primary);
+  margin: 0 0 0.5rem 0;
   font-weight: 800;
-  color: var(--primary);
-  margin: 0;
 }
 
-.back-link {
+.welcome-text {
   color: var(--text-sub);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-.back-link:hover {
-  color: var(--primary);
+  font-size: 1.1rem;
+  margin: 0;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .stat-card {
-  padding: 1.5rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.stat-icon {
+  font-size: 3rem;
+  background: var(--bg-cream);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.stat-info {
+  flex: 1;
 }
 
 .stat-title {
@@ -235,153 +147,73 @@ function cancelEdit(id: string) {
   color: var(--primary);
 }
 
-.table-card {
+.quick-links-card {
   padding: 2rem;
 }
 
 .section-title {
   font-size: 1.2rem;
   color: var(--primary);
-  margin-bottom: 1.5rem;
+  margin: 0 0 1.5rem 0;
   font-weight: 700;
 }
 
-.table-responsive {
-  overflow-x: auto;
-  width: 100%;
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
-table {
-  width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
-}
-
-th {
-  text-align: left;
-  padding: 1rem;
-  border-bottom: 2px solid var(--border-color);
-  color: var(--text-sub);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
-  vertical-align: middle;
-}
-
-.actions-cell {
-  white-space: nowrap;
-  min-width: 400px;
-}
-
-.cell-id {
-  max-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: monospace;
-  color: var(--text-sub);
-  font-size: 0.85rem;
-}
-
-/* Removed hover effects and feedback styles */
-
-.badge-admin {
-  background: var(--primary);
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.badge-user {
-  background: #eee;
-  color: #666;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
-.toolbar {
+.quick-link {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
-}
-
-.admin-actions {
-  display: contents;
-}
-
-.btn {
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid transparent;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-main);
   transition: all 0.2s;
 }
 
-.btn-sm {
-  font-size: 0.8rem;
-  padding: 0.3rem 0.6rem;
+.quick-link:hover {
+  background: var(--bg-cream);
+  border-color: var(--secondary);
+  transform: translateY(-2px);
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-secondary {
-  background: #94a3b8;
-  color: white;
-}
-.btn-secondary:hover {
-  background: #64748b;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-outline {
-  background: transparent;
-  border: 1px solid var(--primary);
-  color: var(--primary);
-}
-.btn-outline:hover {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-fixed-width {
-  min-width: 120px;
-  justify-content: center;
-  display: inline-flex;
+.link-icon {
+  font-size: 2rem;
+  background: var(--bg-cream);
+  width: 60px;
+  height: 60px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
-.input {
-  width: 100%;
-  padding: 0.4rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.9rem;
+.link-label {
+  font-weight: 600;
+  color: var(--primary);
+  text-align: center;
 }
-.input:focus {
-  outline: none;
-  border-color: var(--primary);
+
+@media (max-width: 600px) {
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+  }
 }
 </style>

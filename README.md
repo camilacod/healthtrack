@@ -20,6 +20,12 @@ yarn install
 bun install
 ```
 
+Node.js version
+
+- Use Node 22 LTS (or >= 20.12). Older Node versions (e.g., 18.x) will fail building Nitro with an error about getDefaultHighWaterMark from node:stream.
+  - If you use nvm: `nvm use` (repo includes `.nvmrc`).
+  - If you use asdf: ensure Node 22 and run `asdf install` (repo includes `.node-version`).
+
 ## Development Server
 
 Start the development server on `http://localhost:3000`:
@@ -144,4 +150,3 @@ https://healthtrack-peach.vercel.app/
 ## Video
 
 https://drive.google.com/file/d/1CstcDwbtASy4_F45bvn24v8mnjiXgZLN/view?usp=sharing
-

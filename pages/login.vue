@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reactive, ref, onMounted } from 'vue'
 const form = reactive({ email: '', password: '' })
 const error = ref('')
 

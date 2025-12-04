@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRoute, navigateTo } from '#imports'
+import { $fetch } from 'ofetch'
 
 const route = useRoute()
-// Default to true on desktop (we can refine this later) or false if you want it purely collapsible
-// Let's start true for desktop "dashboard" feel, but responsiveness handles the rest
 const isSidebarOpen = ref(true)
 
 function toggleSidebar() {
@@ -16,10 +16,10 @@ async function logout() {
 }
 
 const menuItems = [
-  { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { label: 'My Stack', path: '/dashboard', icon: '💊' }, /* For now pointing to dashboard until pages exist */
-  { label: 'Database', path: '/database', icon: '🔍' },
-  { label: 'Settings', path: '/dashboard', icon: '⚙️' },
+  { label: 'Home', path: '/admin', icon: '🏠' },
+  { label: 'Users Management', path: '/admin/users', icon: '👥' },
+  { label: 'Database', path: '/admin/database', icon: '💊' },
+  { label: 'Products Curation', path: '/admin/products', icon: '✨' },
 ]
 </script>
 
@@ -29,8 +29,8 @@ const menuItems = [
     <aside class="sidebar" :class="{ 'sidebar-open': isSidebarOpen }">
       <div class="sidebar-header">
         <NuxtLink to="/" class="logo-link">
-          <span class="logo-icon">💊</span> 
-          <span class="logo-text">HealthTrack</span>
+          <span class="logo-icon">🔐</span> 
+          <span class="logo-text">Admin Panel</span>
         </NuxtLink>
         <button class="close-sidebar-btn" @click="toggleSidebar">✕</button>
       </div>
@@ -41,9 +41,8 @@ const menuItems = [
           :key="index" 
           :to="item.path" 
           class="nav-item"
-          :class="{ active: route.path === item.path && item.label === 'Dashboard' }" 
+          :class="{ active: route.path === item.path }" 
         >
-          <!-- Note: Exact match logic simplified for demo -->
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
         </NuxtLink>
@@ -97,7 +96,6 @@ const menuItems = [
   height: 100vh;
   z-index: 50;
   transition: transform 0.3s ease;
-  transform: translateX(-100%); /* Hidden by default */
 }
 
 .sidebar.sidebar-open {
@@ -113,7 +111,7 @@ const menuItems = [
 }
 
 .close-sidebar-btn {
-  display: none; /* Only visible on mobile */
+  display: none;
   background: none;
   border: none;
   font-size: 1.5rem;
@@ -157,8 +155,8 @@ const menuItems = [
 }
 
 .nav-item.router-link-exact-active {
-    background: var(--primary);
-    color: white;
+  background: var(--primary);
+  color: white;
 }
 
 .sidebar-footer {
@@ -203,7 +201,7 @@ const menuItems = [
 
 .top-bar {
   padding: 1rem 2rem;
-  display: flex; /* Always visible */
+  display: flex;
 }
 
 .hamburger-btn {
@@ -243,10 +241,25 @@ const menuItems = [
   z-index: 40;
 }
 
+/* Desktop: sidebar hidden when not open */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+  
   .main-content.content-shifted {
-    margin-left: 0; /* Don't push content on mobile, just overlay */
+    margin-left: 0;
   }
   
   .content-wrapper {
@@ -258,7 +271,7 @@ const menuItems = [
   }
 
   .sidebar-overlay {
-    display: block; /* Only show overlay on mobile when open logic handles v-if */
+    display: block;
   }
 }
 </style>
