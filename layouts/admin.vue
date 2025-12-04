@@ -11,8 +11,8 @@ function toggleSidebar() {
 }
 
 async function logout() {
-  await $fetch('/api/auth/logout', { method: 'POST' })
-  navigateTo('/')
+  await $fetch('/api/admin/auth/logout', { method: 'POST' })
+  navigateTo('/admin/login')
 }
 
 const menuItems = [

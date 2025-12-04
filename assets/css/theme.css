@@ -3,10 +3,11 @@
   --primary: #0F172A;   /* Dark Navy */
   --secondary: #F97316; /* Orange */
   --bg-cream: #FDFBF7;  /* Cream Background */
+  --bg-muted: #f5f5f0;  /* Muted background for tags/chips */
   --white: #ffffff;
   --text-main: #333;
   --text-sub: #555;
-  --border-color: #eee;
+  --border-color: #e5e5e5;
 
   /* Legacy/Admin Colors (Optional: can be mapped to new theme or kept) */
   --burgundy: #800020;

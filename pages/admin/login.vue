@@ -7,12 +7,8 @@ const error = ref('')
 async function submit() {
   error.value = ''
   try {
-    const res = await $fetch('/api/auth/login', { method: 'POST', body: form })
-    if (res?.isAdmin) {
-      navigateTo('/admin')
-    } else {
-      error.value = 'You do not have administrator permissions'
-    }
+    await $fetch('/api/admin/auth/login', { method: 'POST', body: form })
+    navigateTo('/admin')
   } catch (e: any) {
     error.value = e?.data?.message || 'Login failed'
   }

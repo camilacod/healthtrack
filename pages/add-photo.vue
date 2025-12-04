@@ -12,9 +12,10 @@ const loading = ref(false)
 const error = ref('')
 
 type VisionMatch = { status: 'match'; match: { id: number; name: string; brand: string | null; status: string }; score: number }
-type VisionPending = { status: 'pending'; supplementId: number; product: { name: string; brand: string | null; form: string | null } }
+type VisionPending = { status: 'pending'; supplementId: number; product: { name: string; brand: string | null; form: string | null; servingSize?: any; servingUnit?: any; perServing?: any } }
+type VisionGeneric = { status: 'generic_suggestion'; generic: { id: number; name: string; brand: string | null; status: string }; product: { name: string; brand: string | null; form: string | null; servingSize?: any; servingUnit?: any; perServing?: any } }
 type VisionNone = { status: 'no_match'; items: any[] }
-const visionResult = ref<VisionMatch | VisionPending | VisionNone | null>(null)
+const visionResult = ref<VisionMatch | VisionPending | VisionGeneric | VisionNone | null>(null)
 
 function triggerCamera() {
   fileInput.value?.click()
@@ -55,9 +56,21 @@ async function savePhoto() {
 async function confirmAddToStack(supplementId: number) {
   try {
     await $fetch('/api/user/supplements', { method: 'POST', body: { supplementId, relation: 'uses' } })
-    navigateTo('/dashboard')
+    navigateTo('/stack')
   } catch (e: any) {
     error.value = e?.data?.message || 'Failed to add to stack'
+  }
+}
+
+async function submitBrandVersion() {
+  const r = visionResult.value as any
+  if (!r || (r.status !== 'generic_suggestion' && r.status !== 'pending')) return
+  const p = r.product
+  try {
+    const res = await $fetch('/api/supplements/submit', { method: 'POST', body: p })
+    visionResult.value = { status: 'pending', supplementId: (res as any).supplementId, product: p } as any
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Failed to submit product'
   }
 }
 </script>
@@ -111,7 +124,7 @@ async function confirmAddToStack(supplementId: number) {
         </div>
         <div class="result-actions">
           <button class="btn btn-primary" @click="confirmAddToStack(visionResult.match.id)">Add to My Stack</button>
-          <NuxtLink to="/dashboard" class="btn btn-text">Cancel</NuxtLink>
+          <NuxtLink to="/" class="btn btn-text">Cancel</NuxtLink>
         </div>
       </template>
 
@@ -128,6 +141,23 @@ async function confirmAddToStack(supplementId: number) {
         </p>
         <div class="result-actions">
           <NuxtLink to="/dashboard" class="btn btn-primary">Got it</NuxtLink>
+        </div>
+      </template>
+
+      <!-- Generic suggestion: name matches but brand differs; offer Generic or submit Brand -->
+      <template v-else-if="visionResult.status === 'generic_suggestion'">
+        <h2 class="result-title">We have it as Generic</h2>
+        <div class="result-item">
+          <div class="result-name">{{ visionResult.generic.name }}</div>
+          <div class="result-meta">Brand: {{ visionResult.generic.brand || 'Generic' }}</div>
+        </div>
+        <p class="disclaimer">
+          We found a published Generic version of your product. You can add it now,
+          or submit your specific brand for review.
+        </p>
+        <div class="result-actions">
+          <button class="btn btn-primary" @click="confirmAddToStack(visionResult.generic.id)">Add Generic to My Stack</button>
+          <button class="btn btn-secondary" @click="submitBrandVersion">Submit Brand Version</button>
         </div>
       </template>
 

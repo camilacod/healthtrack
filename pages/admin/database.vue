@@ -19,8 +19,8 @@ async function load() {
 
 onMounted(async () => {
   try {
-    me.value = await $fetch('/api/auth/me')
-    if (!me.value?.isAdmin) {
+    me.value = await $fetch('/api/admin/auth/me')
+    if (!me.value) {
       navigateTo('/admin/login')
       return
     }

@@ -5,7 +5,8 @@ import { db } from '../utils/db'
 import { admins, users } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
-const COOKIE_NAME = 'auth'
+const USER_COOKIE_NAME = 'auth'
+const ADMIN_COOKIE_NAME = 'admin_auth'
 
 function getSecret() {
   // Prefer runtimeConfig to avoid build-time env inlining
@@ -53,13 +54,26 @@ export function verifySession(token?: string): SessionPayload | null {
 }
 
 export async function useAuth(event: H3Event) {
-  const token = getCookie(event, COOKIE_NAME)
+  // Try user cookie first
+  const token = getCookie(event, USER_COOKIE_NAME)
   const payload = verifySession(token)
   if (!payload) return null
   const [user] = await db.select().from(users).where(eq(users.id, payload.uid))
   if (!user) return null
   const [adm] = await db.select().from(admins).where(eq(admins.userId, payload.uid))
   return { user, isAdmin: !!adm }
+}
+
+export async function useAdminAuth(event: H3Event) {
+  // Use admin-specific cookie
+  const token = getCookie(event, ADMIN_COOKIE_NAME)
+  const payload = verifySession(token)
+  if (!payload) return null
+  const [user] = await db.select().from(users).where(eq(users.id, payload.uid))
+  if (!user) return null
+  const [adm] = await db.select().from(admins).where(eq(admins.userId, payload.uid))
+  if (!adm) return null // Must be admin
+  return { user, isAdmin: true }
 }
 
 export async function requireUser(event: H3Event) {
@@ -69,14 +83,15 @@ export async function requireUser(event: H3Event) {
 }
 
 export async function requireAdmin(event: H3Event) {
-  const auth = await requireUser(event)
-  if (!auth.isAdmin) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  const auth = await useAdminAuth(event)
+  if (!auth) throw createError({ statusCode: 401, statusMessage: 'Admin authentication required' })
   return auth
 }
 
-export function setAuthCookie(event: H3Event, payload: SessionPayload) {
+export function setAuthCookie(event: H3Event, payload: SessionPayload, isAdminLogin = false) {
   const token = signSession(payload)
-  setCookie(event, COOKIE_NAME, token, {
+  const cookieName = isAdminLogin ? ADMIN_COOKIE_NAME : USER_COOKIE_NAME
+  setCookie(event, cookieName, token, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
@@ -85,6 +100,12 @@ export function setAuthCookie(event: H3Event, payload: SessionPayload) {
   })
 }
 
-export function clearAuthCookie(event: H3Event) {
-  deleteCookie(event, COOKIE_NAME, { path: '/' })
+export function clearAuthCookie(event: H3Event, isAdmin = false) {
+  const cookieName = isAdmin ? ADMIN_COOKIE_NAME : USER_COOKIE_NAME
+  deleteCookie(event, cookieName, { path: '/' })
+}
+
+export function clearAllAuthCookies(event: H3Event) {
+  deleteCookie(event, USER_COOKIE_NAME, { path: '/' })
+  deleteCookie(event, ADMIN_COOKIE_NAME, { path: '/' })
 }

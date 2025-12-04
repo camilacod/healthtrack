@@ -42,3 +42,41 @@ export async function deleteUserRepo(id: string): Promise<boolean> {
   const res = await db.delete(users).where(eq(users.id, id))
   return (res?.rowCount ?? 0) > 0
 }
+
+export async function verifyPasswordRepo(userId: string, password: string): Promise<boolean> {
+  const result = await db.execute(
+    sql`SELECT id FROM users 
+        WHERE id = ${userId}::uuid 
+        AND password_hash = crypt(${password}, password_hash)`
+  )
+  return ((result as any)?.rows?.length ?? 0) > 0
+}
+
+export async function updatePasswordRepo(userId: string, newPassword: string): Promise<boolean> {
+  const result = await db.execute(
+    sql`UPDATE users 
+        SET password_hash = crypt(${newPassword}, gen_salt('bf', 12))
+        WHERE id = ${userId}::uuid`
+  )
+  return ((result as any)?.rowCount ?? 0) > 0
+}
+
+export async function updateProfileRepo(
+  userId: string, 
+  input: { email?: string; username?: string | null }
+): Promise<User | undefined> {
+  const updates: any = {}
+  if (input.email !== undefined) updates.email = input.email
+  if (input.username !== undefined) updates.username = input.username
+  
+  if (Object.keys(updates).length === 0) {
+    return await getUserByIdRepo(userId)
+  }
+  
+  const [row] = await db
+    .update(users)
+    .set(updates)
+    .where(eq(users.id, userId))
+    .returning()
+  return row
+}

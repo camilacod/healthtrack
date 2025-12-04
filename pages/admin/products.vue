@@ -31,8 +31,8 @@ async function load() {
 
 onMounted(async () => {
   try {
-    me.value = await $fetch('/api/auth/me')
-    if (!me.value?.isAdmin) {
+    me.value = await $fetch('/api/admin/auth/me')
+    if (!me.value) {
       navigateTo('/admin/login')
       return
     }
@@ -62,7 +62,7 @@ function startCurate(p: any) {
   editForm.form = p.form || ''
   editForm.servingSize = p.servingSize || ''
   editForm.servingUnit = p.servingUnit || ''
-  editForm.perServing = ''
+  editForm.perServing = p.perServing.constructor === Object ? JSON.stringify(p.perServing) : (p.perServing || '') // JSON string
 }
 
 async function saveAndPublish() {

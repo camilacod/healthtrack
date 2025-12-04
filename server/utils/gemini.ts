@@ -34,18 +34,27 @@ export async function geminiRecognizeSupplement(imageBase64: string): Promise<Ge
   const { geminiApiKey } = useRuntimeConfig()
   if (!geminiApiKey) throw new Error('Missing GEMINI_API_KEY')
 
-  const prompt = `Analyze the provided supplement product photo.
-Return ONLY a JSON array of objects with these exact keys per detected product:
-[{
-  "name": string,          // product name (human readable)
-  "brand": string|null,    // brand if identifiable, otherwise null
-  "form": string|null,     // capsule | tablet | powder | liquid | gummy | softgel | etc. if visible
-  "serving_size": number|string|null, // numeric value if labelled, otherwise null
-  "serving_unit": string|null,        // unit like capsule, tablet, scoop, ml, g
-  "per_serving": object|string|null   // nutrition composition per serving as key-value; if unknown, null
-}]
-Do not include any extra text, explanations or markdown.
-If nothing is identifiable, return an empty JSON array []`;
+  const prompt = `You are an expert at reading supplement labels from product photos.
+
+Return ONLY a JSON array of objects. For each detected supplement, include exactly these keys:
+[
+  {
+    "name": string,            // IMPORTANT: compound ONLY (e.g., "CLA", "Vitamin C", "Magnesium"). Do NOT include strength, dosage, counts, flavors, or marketing text. For example, if the label says "CLA 800 mg Nutritional Oil", return "CLA".
+    "brand": string|null,      // Brand on the label if clearly visible; otherwise null.
+    "form": string|null,       // capsule | tablet | powder | liquid | gummy | softgel | etc., if inferrable.
+    "serving_size": number|string|null, // Numeric value of a single serving if visible or strongly inferable (e.g., 1, 2, 800). If count is not numeric or unclear, use null.
+    "serving_unit": string|null,        // Unit for serving_size (e.g., capsule, tablet, scoop, ml, g). Use singular forms like "capsule".
+    "per_serving": object|string|null   // Key-value map of nutrients per serving inferred from the label (e.g., {"vitamin_c_mg": 100, "zinc_mg": 5}). If not visible, null.
+  }
+]
+
+Guidance:
+- Extract the compound name only for "name". Never include numbers, milligrams, bottles, counts, or descriptors in "name".
+- Infer as much as possible from the visible text (mg, mcg, IU, %DV), including form and per_serving details.
+- Prefer common units: capsule, tablet, scoop, ml, g. Use singular.
+- If nothing identifiable, return [] (an empty JSON array).
+
+Do not include any extra text, explanations, or markdown — only the JSON array.`;
 
   const body = {
     contents: [
@@ -86,4 +95,3 @@ If nothing is identifiable, return an empty JSON array []`;
   if (Array.isArray(parsed)) return parsed as GeminiSupplementResult[]
   return []
 }
-

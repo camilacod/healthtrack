@@ -40,11 +40,34 @@ export async function findSupplementsByLooseNameBrand(name: string, brand?: stri
   const nameLike = `%${name}%`
   const brandLike = brand ? `%${brand}%` : null
   const rows = await db.execute(
-    sql`select id, name, brand, status
+    sql`select id, name, brand, status, serving_size, serving_unit
         from ${supplements}
         where lower(name) like lower(${nameLike})
           ${brandLike ? sql` or (brand is not null and lower(brand) like lower(${brandLike}))` : sql``}
         limit ${limit}`
+  )
+  return (rows as any)?.rows ?? []
+}
+
+export async function findPublishedByNameAndBrandExact(name: string, brand: string) {
+  const rows = await db.execute(
+    sql`select id, name, brand, status, serving_size, serving_unit
+        from ${supplements}
+        where lower(name) = lower(${name})
+          and brand is not null and lower(brand) = lower(${brand})
+          and status = 'published'`
+  )
+  return (rows as any)?.rows ?? []
+}
+
+export async function findGenericPublishedByName(name: string) {
+  const rows = await db.execute(
+    sql`select id, name, brand, status, serving_size, serving_unit
+        from ${supplements}
+        where lower(name) = lower(${name})
+          and (brand is null or lower(brand) = 'generic')
+          and status = 'published'
+        limit 5`
   )
   return (rows as any)?.rows ?? []
 }
@@ -54,6 +77,9 @@ export async function createPendingSupplementRepo(input: {
   brand?: string | null
   form?: string | null
   createdBy: string
+  servingSize?: string | number | null
+  servingUnit?: string | null
+  perServing?: any
 }) {
   const q = db
     .insert(supplements)
@@ -62,6 +88,9 @@ export async function createPendingSupplementRepo(input: {
       brand: input.brand ?? null,
       form: input.form ?? null,
       // leave servingSize, servingUnit, perServing null on purpose
+      servingSize: typeof input.servingSize === 'number' ? String(input.servingSize) : (input.servingSize ?? null) as any,
+      servingUnit: input.servingUnit ?? null,
+      perServing: typeof input.perServing === 'string' ? (input.perServing as any) : (input.perServing ?? null),
       status: 'pending' as any,
       createdBy: input.createdBy,
     })
@@ -77,6 +106,9 @@ export async function listPendingSupplementsRepo(limit = 100) {
       name: supplements.name,
       brand: supplements.brand,
       form: supplements.form,
+      servingSize: supplements.servingSize,
+      servingUnit: supplements.servingUnit,
+      perServing: supplements.perServing,
       status: supplements.status,
       createdAt: supplements.createdAt,
     })

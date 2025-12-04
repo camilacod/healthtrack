@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, uuid, text, timestamp, bigint, jsonb } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, uuid, text, timestamp, bigint, jsonb, serial, integer, boolean, time, date } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const supplementStatusEnum = pgEnum('supplement_status', [
@@ -56,6 +56,76 @@ export const userSupplements = pgTable('user_supplements', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// Schedule tables for supplement reminders
+export const supplementSchedules = pgTable('supplement_schedules', {
+  id: serial('id').primaryKey(),
+  userSupplementId: bigint('user_supplement_id', { mode: 'number' })
+    .notNull()
+    .references(() => userSupplements.id, { onDelete: 'cascade' })
+    .unique(),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const scheduleDays = pgTable('schedule_days', {
+  id: serial('id').primaryKey(),
+  scheduleId: integer('schedule_id')
+    .notNull()
+    .references(() => supplementSchedules.id, { onDelete: 'cascade' }),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 6=Saturday
+})
+
+export const scheduleTimes = pgTable('schedule_times', {
+  id: serial('id').primaryKey(),
+  scheduleId: integer('schedule_id')
+    .notNull()
+    .references(() => supplementSchedules.id, { onDelete: 'cascade' }),
+  timeOfDay: time('time_of_day').notNull(),
+  label: text('label'), // Optional: "Morning", "With dinner", etc.
+})
+
+export const supplementLogs = pgTable('supplement_logs', {
+  id: serial('id').primaryKey(),
+  userSupplementId: bigint('user_supplement_id', { mode: 'number' })
+    .notNull()
+    .references(() => userSupplements.id, { onDelete: 'cascade' }),
+  takenAt: timestamp('taken_at', { withTimezone: true }).notNull().defaultNow(),
+  scheduledTime: time('scheduled_time'),
+  skipped: boolean('skipped').default(false),
+  notes: text('notes'),
+})
+
+// User stats for tracking streaks
+export const userStats = pgTable('user_stats', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' })
+    .unique(),
+  currentStreak: integer('current_streak').default(0),
+  longestStreak: integer('longest_streak').default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// Daily summaries for historical analytics
+export const dailySummaries = pgTable('daily_summaries', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  date: date('date').notNull(),
+  dosesTaken: integer('doses_taken').default(0),
+  dosesScheduled: integer('doses_scheduled').default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Admin = typeof admins.$inferSelect
+export type SupplementSchedule = typeof supplementSchedules.$inferSelect
+export type ScheduleDay = typeof scheduleDays.$inferSelect
+export type ScheduleTime = typeof scheduleTimes.$inferSelect
+export type SupplementLog = typeof supplementLogs.$inferSelect
+export type UserStats = typeof userStats.$inferSelect
+export type DailySummary = typeof dailySummaries.$inferSelect

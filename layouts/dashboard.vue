@@ -19,7 +19,8 @@ const menuItems = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
   { label: 'My Stack', path: '/stack', icon: '💊' },
   { label: 'Database', path: '/database', icon: '🔍' },
-  { label: 'Settings', path: '/dashboard', icon: '⚙️' },
+  { label: 'Snap Product', path: '/add-photo', icon: '📸' },
+  { label: 'Settings', path: '/settings', icon: '⚙️' },
 ]
 </script>
 
