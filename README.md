@@ -1,147 +1,272 @@
-# HealthTrack# Nuxt Minimal Starter
+# HealthTrack
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+> Seguimiento de suplementos con reconocimiento por imagen e interfaz Admin/Cliente. Extracción automática de nombre de compuesto, marca y datos por porción usando IA, con curación por administradores.
 
-## Setup
+## Características Clave
 
-Make sure to install dependencies:
+- Reconocimiento visual con IA: Gemini 2.5 Flash para leer etiquetas de suplementos.
+- Normalización multilingüe: detección en inglés/español y estandarización de form y serving_unit.
+- Sugerencia por nombre: si existe versión publicada “Generic”, el usuario puede agregarla o enviar su marca a revisión.
+- Curación admin: edición completa del producto (PUT) y publicación/rechazo, con conversión automática de submitted → uses.
+- Mi Stack: vista del usuario con suplementos en uso, datos por porción y búsqueda.
 
-```bash
-# npm
-npm install
+## Tabla de Contenidos
 
-# pnpm
-pnpm install
+- Resumen del Proyecto
+- Arquitectura del Sistema
+- IA y Reconocimiento
+- Estructura del Proyecto
+- Puesta en Marcha (local)
+- Configuración
+- Frontend (Vistas y UX)
+- Operaciones CRUD (principales)
+- Esquema de Base de Datos
+- Despliegue
+- Link deployment
+- Video
+- Conclusiones
 
-# yarn
-yarn install
+## Resumen del Proyecto
 
-# bun
-bun install
+HealthTrack permite a usuarios identificar suplementos desde una foto, comparar con el catálogo y agregarlos a su Stack. Cuando no existe coincidencia exacta, el sistema crea una solicitud pendiente que el equipo Admin revisa y publica. La arquitectura separa responsabilidades por capas y mantiene un flujo de datos claro entre UI, servicios y repositorios.
+
+## Arquitectura del Sistema
+
+```
+┌────────────────────┐   HTTP  ┌────────────────────┐   SQL/Drizzle   ┌────────────────────┐
+│ Nuxt 4 (Vue 3)     │  ─────▶ │  Nitro + H3 (API)  │ ──────────────▶ │  PostgreSQL (RDS)  │
+│ Pages/Layouts      │         │ Services/Repos     │                  │  Supabase Pooler   │
+└────────────────────┘         └────────────────────┘                  └────────────────────┘
+           │                               │                                      │
+           │                               │                                      │
+           ▼                               ▼                                      ▼
+   Camera Input (Web)           Gemini 2.5 Flash (Vision)                Drizzle ORM (Typed)
 ```
 
-Node.js version
+Ciclos de vida y capas
 
-- Use Node 22 LTS (or >= 20.12). Older Node versions (e.g., 18.x) will fail building Nitro with an error about getDefaultHighWaterMark from node:stream.
-  - If you use nvm: `nvm use` (repo includes `.nvmrc`).
-  - If you use asdf: ensure Node 22 and run `asdf install` (repo includes `.node-version`).
+- Domain (`server/domain/*`): contratos de entrada/salida.
+- Repository (`server/repositories/*`): acceso a PostgreSQL con Drizzle.
+- Service (`server/services/*`): lógica de negocio, validaciones, matching.
+- Controller (`server/controllers/*`): orquestación de servicios.
+- API (`server/api/**`): rutas REST con H3.
+- Utils (`server/utils/*`): db, auth, gemini.
+- Plugin (`server/plugins/bootstrap-db.ts`): bootstrap SQL opcional.
 
-## Development Server
+### Ciclo de Vida (flujos principales)
 
-Start the development server on `http://localhost:3000`:
+- Autenticación: `POST /api/auth/login` firma cookie; `GET /api/auth/me` expone sesión; `POST /api/auth/logout` invalida cookie.
 
-```bash
-# npm
-npm run dev
+- Inicio por búsqueda en BD (catálogo):
+  1) El usuario navega a `pages/database.vue:1`.
+  2) El cliente carga el catálogo publicado con `GET /api/supplements` y aplica filtro local.
+  3) Al elegir un producto, hace clic en “Add to Stack” → `POST /api/user/supplements` con `relation='uses'`.
+  4) El producto aparece en “Mi Stack”. Si no encuentra su producto, utiliza el flujo de foto.
 
-# pnpm
-pnpm dev
+- Inicio por foto (reconocimiento):
+  1) El cliente captura o selecciona foto en `pages/add-photo.vue:1` y envía `multipart/form-data` a `POST /api/vision/supplement`.
+  2) En el backend, `server/api/vision/supplement.post.ts:1` invoca `recognizeSupplementFromImage`.
+  3) `visionService` usa Gemini (Vision) para extraer `name` (compuesto), `brand`, `form`, `serving_size`, `serving_unit`, `per_serving` y decide:
+     - Match exacto (name+brand, publicado) → UI muestra “Add to My Stack”.
+     - Sugerencia “Generic” (coincide name; brand distinta) → UI ofrece “Add Generic” o “Submit Brand”.
+     - Sin match → crea `supplements.status='pending'` y `user_supplements.relation='submitted'`.
+  4) En Admin, `pages/admin/products.vue:1` permite Curate (PUT + Publish) o Publish directo.
+  5) Al publicar, el sistema convierte `submitted` → `uses` en `user_supplements`.
 
-# yarn
-yarn dev
+- Mi Stack: `GET /api/user/supplements` lista suplementos con `relation='uses'`. Vista `pages/stack.vue:1`.
 
-# bun
-bun run dev
-```
+Capas y patrones
 
-## Production
+- Cliente: `server/utils/gemini.ts` construye el prompt y llama a Gemini 2.5 Flash con la imagen en base64.
+- Prompt: fuerza nombre de compuesto (sin dosis), normaliza form y serving_unit a inglés singular, y extrae per_serving en snake_case. Soporta texto en español.
+- Matching: `server/services/visionService.ts` prioriza coincidencia exacta name+brand. Si solo coincide el name y hay versión “Generic”, se sugiere usarla o enviar “Submit Brand”. Si no hay coincidencias, se crea un `supplement` en `pending` y se enlaza al usuario con `relation='submitted'`.
 
-Build the application for production:
+## Estructura del Proyecto
 
-```bash
-# npm
-npm run build
+- `pages/*`: vistas Cliente/Admin y layouts.
+- `server/api/**`: endpoints H3/Nitro.
+- `server/services/**`: reglas de negocio (auth, vision, users, supplements).
+- `server/repositories/**`: consultas Drizzle.
+- `server/db/schema.ts`: esquema PostgreSQL (enums, tablas, índices).
+- `server/utils/**`: db pool, auth cookies, gemini client.
 
-# pnpm
-pnpm build
+## Puesta en Marcha (local)
 
-# yarn
-yarn build
+- Requisitos
+  - Node.js 22 LTS (o >= 20.12). `.nvmrc` y `.node-version` incluidos.
+  - PostgreSQL o Supabase. Proveer `SUPABASE_DB_POOL_URL` o `DATABASE_URL`.
+  - `NUXT_SESSION_SECRET`, `GEMINI_API_KEY`.
+- Pasos
+  1. `cp .env.example .env` y completar variables.
+  2. `nvm use`.
+  3. `bun install` (o `npm install`).
+  4. `bun run dev`.
+  5. (Admin opcional) Normalizar DB: `POST /api/admin/db/ensure-enums` y `POST /api/admin/db/fix-sequences`.
 
-# bun
-bun run build
-```
+## Configuración
 
-Locally preview production build:
+- `SUPABASE_DB_POOL_URL` o `DATABASE_URL`: cadena PostgreSQL.
+- `NUXT_SESSION_SECRET`: firma de cookies.
+- `GEMINI_API_KEY`: llamadas al modelo Vision.
+- `NUXT_DB_BOOTSTRAP`: `1/true` para bootstrap SQL (no con pooler de Supabase).
 
-```bash
-# npm
-npm run preview
+## Frontend (Vistas y UX)
 
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
-
-
-## Arquitectura 
-
-- Capas (backend):
-  - Dominio (`server/domain/*`): contratos de entrada/salida (p.ej. `CreateUserInput`).
-  - Repositorios (`server/repositories/*`): acceso a datos con Drizzle (PostgreSQL/Supabase).
-  - Servicios (`server/services/*`): reglas de negocio y validaciones.
-  - Controladores (`server/controllers/*`): orquesta servicios para las rutas.
-  - Rutas API (`server/api/**`): endpoints HTTP (Nitro/H3).
-  - Utilidades (`server/utils/db.ts`, `server/utils/auth.ts`): cliente DB y sesión (cookies firmadas).
-  - Esquema DB (`server/db/schema.ts`): definición Drizzle de tablas y tipos.
-  - Bootstrap (`server/plugins/bootstrap-db.ts`): SQL idempotente opcional (desactivado por defecto y no corre contra el pooler).
-
-- Frontend (Nuxt 4):
-  - Páginas: `pages/login.vue`, `pages/signup.vue`, `pages/dashboard.vue`, `pages/admin/login.vue`, `pages/admin/index.vue`.
-
-  - Entrada App: `app.vue` con botón fijo “Login Admin”.
-
-- Conexión a DB:
-  - Drizzle + `pg.Pool` vía Supabase Pooler, con SSL y parámetros para entornos serverless.
-  - Variables: `SUPABASE_DB_POOL_URL`, `NUXT_SESSION_SECRET` (obligatoria para cookies firmadas).
-
-## Funcionalidades principales
-
-- Autenticación por email/contraseña:
-  - Registro (sólo usuarios): crea cuenta y abre sesión.
-  - Login de usuario y login de admin (redirige a su panel si tiene rol).
-  - Cookies firmadas (HMAC) con `NUXT_SESSION_SECRET`.
-
-- Roles y protección de rutas:
-  - Usuarios autenticados: pueden ver suplementos y agregarlos a su perfil.
-  - Admins: CRUD de usuarios y gestión de admins; resumen de usuarios/suplementos.
-
-- Suplementos:
-  - Listado público (GET) para que el usuario añada a “sus suplementos”.
+- Cliente: Dashboard (layout), Mi Stack (`/stack`), Base de Datos (`/database`), Add Photo (`/add-photo`).
+- Admin: Login, Resumen, Usuarios, Base de Datos, Curación de Productos (pendientes, Curate, Save & Publish, Publish, Reject).
+- Layouts: `default`, `dashboard`, `admin`.
 
 ## Operaciones CRUD (principales)
 
-- Usuarios (admin):
-  - Listar: `GET /api/users`
-  - Obtener por id: `GET /api/users/:id`
-  - Actualizar: `PUT /api/users/:id` (email, username)
-  - Eliminar: `DELETE /api/users/:id`
-  - Crear usuarios: se realiza mediante registro de usuario `POST /api/auth/signup` (no desde admin UI).
+- Autenticación
+  - `POST /api/auth/signup` — crea usuario.
+  - `POST /api/auth/login` — inicia sesión y firma cookie.
+  - `POST /api/auth/logout` — cierra sesión.
+  - `GET /api/auth/me` — sesión actual.
 
-- Admins (rol):
-  - Listar: `GET /api/admins`
-  - Asignar rol admin: `POST /api/admins` body `{ userId }`
-  - Quitar rol admin: `DELETE /api/admins/:userId`
+- Usuarios (Admin)
+  - `GET /api/users` — listar usuarios.
+  - `GET /api/users/:id` — obtener usuario por id.
+  - `PUT /api/users/:id` — actualizar email/username.
+  - `DELETE /api/users/:id` — eliminar usuario.
 
-- Autenticación:
-  - Registro: `POST /api/auth/signup` (email, password, username?)
-  - Login: `POST /api/auth/login` (email, password)
-  - Logout: `POST /api/auth/logout`
-  - Sesión actual: `GET /api/auth/me`
+- Admins (rol)
+  - `GET /api/admins` — listar admins.
+  - `POST /api/admins` — asignar rol admin (`{ userId }`).
+  - `DELETE /api/admins/:userId` — quitar rol admin.
 
-- Suplementos:
-  - Listar: `GET /api/supplements`
-  - Añadir a usuario autenticado: `POST /api/user/supplements` body `{ supplementId, relation? }`
+- Suplementos (usuario)
+  - `GET /api/supplements` — listado simple.
+  - `POST /api/vision/supplement` — analiza imagen, retorna `match`, `generic_suggestion`, `pending` o `no_match`.
+  - `POST /api/supplements/submit` — crea pendiente con brand específico, relación `submitted`.
+  - `POST /api/user/supplements` — agrega relación (`uses`, `added`, `submitted`).
+  - `GET /api/user/supplements` — suplementos del usuario con `relation='uses'`.
 
-- Resumen admin:
-  - `GET /api/admin/summary` → { users, supplements }
+- Suplementos (Admin)
+  - `GET /api/supplements/pending` — lista pendientes.
+  - `PUT /api/supplements/:id` — actualiza detalles (name, brand, form, serving_size, serving_unit, per_serving).
+  - `POST /api/supplements/:id/publish` — publica y convierte `submitted` → `uses`.
+  - `POST /api/supplements/:id/reject` — rechaza con `review_notes`.
+  - `GET /api/admin/summary` — métricas.
+
+## Esquema de Base de Datos
+
+- `users` y `admins` para identidad/roles.
+- `supplements` con `status` (`draft | pending | published | rejected`).
+- `user_supplements` con `relation` (`added | uses | favorite | submitted`).
+
+
+Esquema (SQL de referencia)
+
+![Database Schema](schema.png)
+
+
+```sql
+
+
+
+CREATE TABLE public.admins (
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT admins_pkey PRIMARY KEY (user_id),
+  CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.daily_summaries (
+  id integer NOT NULL DEFAULT nextval('daily_summaries_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  date date NOT NULL,
+  doses_taken integer DEFAULT 0,
+  doses_scheduled integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT daily_summaries_pkey PRIMARY KEY (id),
+  CONSTRAINT daily_summaries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.schedule_days (
+  id integer NOT NULL DEFAULT nextval('schedule_days_id_seq'::regclass),
+  schedule_id integer NOT NULL,
+  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  CONSTRAINT schedule_days_pkey PRIMARY KEY (id),
+  CONSTRAINT schedule_days_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.supplement_schedules(id)
+);
+CREATE TABLE public.schedule_times (
+  id integer NOT NULL DEFAULT nextval('schedule_times_id_seq'::regclass),
+  schedule_id integer NOT NULL,
+  time_of_day time without time zone NOT NULL,
+  label text,
+  CONSTRAINT schedule_times_pkey PRIMARY KEY (id),
+  CONSTRAINT schedule_times_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.supplement_schedules(id)
+);
+CREATE TABLE public.supplement_logs (
+  id integer NOT NULL DEFAULT nextval('supplement_logs_id_seq'::regclass),
+  user_supplement_id bigint NOT NULL,
+  taken_at timestamp with time zone NOT NULL DEFAULT now(),
+  scheduled_time time without time zone,
+  skipped boolean DEFAULT false,
+  notes text,
+  CONSTRAINT supplement_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT supplement_logs_user_supplement_id_fkey FOREIGN KEY (user_supplement_id) REFERENCES public.user_supplements(id)
+);
+CREATE TABLE public.supplement_schedules (
+  id integer NOT NULL DEFAULT nextval('supplement_schedules_id_seq'::regclass),
+  user_supplement_id bigint NOT NULL UNIQUE,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT supplement_schedules_pkey PRIMARY KEY (id),
+  CONSTRAINT supplement_schedules_user_supplement_id_fkey FOREIGN KEY (user_supplement_id) REFERENCES public.user_supplements(id)
+);
+CREATE TABLE public.supplements (
+  id bigint NOT NULL DEFAULT nextval('supplements_id_seq'::regclass),
+  name text NOT NULL,
+  brand text,
+  form text,
+  serving_size numeric,
+  serving_unit text,
+  per_serving jsonb,
+  status USER-DEFINED NOT NULL DEFAULT 'draft'::supplement_status,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  review_notes text,
+  category USER-DEFINED,
+  CONSTRAINT supplements_pkey PRIMARY KEY (id),
+  CONSTRAINT supplements_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT supplements_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.user_stats (
+  id integer NOT NULL DEFAULT nextval('user_stats_id_seq'::regclass),
+  user_id uuid NOT NULL UNIQUE,
+  current_streak integer DEFAULT 0,
+  longest_streak integer DEFAULT 0,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT user_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.user_supplements (
+  id bigint NOT NULL DEFAULT nextval('user_supplements_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  supplement_id bigint NOT NULL,
+  relation USER-DEFINED NOT NULL DEFAULT 'added'::user_supp_relation,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_supplements_pkey PRIMARY KEY (id),
+  CONSTRAINT user_supplements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_supplements_supplement_id_fkey FOREIGN KEY (supplement_id) REFERENCES public.supplements(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL UNIQUE,
+  username text UNIQUE,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  password_hash text NOT NULL,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+```
+
+## Despliegue
+
+- Producción actual: Vercel (Nitro serverless).
+- Opción AWS: ECS Fargate o EC2 con RDS PostgreSQL, S3 y Secrets Manager; alternativa serverless con API Gateway + Lambda + RDS Proxy.
 
 ## Link deployment
 
@@ -151,137 +276,9 @@ https://healthtrack-peach.vercel.app/
 
 https://drive.google.com/file/d/1CstcDwbtASy4_F45bvn24v8mnjiXgZLN/view?usp=sharing
 
+## Conclusiones
 
-## Trabajo Final — HealthTrack
-
-Nombre del proyecto: HealthTrack
-
-Integrantes: completar
-
-Objetivo
-
-- Desarrollar una aplicación web de seguimiento de suplementos con dos perfiles (Cliente y Admin), captura de foto del producto, reconocimiento vía IA (Vision) y flujo de curación/approval por parte de Admin.
-- El usuario final puede iniciar sesión, registrar cuenta, buscar en la base de datos, agregar suplementos a su Stack y subir una foto para reconocer productos. El administrador gestiona usuarios, admins y productos pendientes, y publica productos curados.
-
-Alcance y Módulo de IA
-
-- Módulo de IA: integración con el modelo Gemini 2.5 Flash para reconocimiento de etiquetas de suplementos a partir de imágenes, obteniendo nombre del compuesto, marca, forma, serving_size, serving_unit y per_serving.
-- Prompt multilingüe (inglés/español) con normalización de términos (form y serving_unit en inglés en singular) y extracción de nutrientes per_serving en snake_case. Ver `server/utils/gemini.ts:1`.
-- Coincidencia de productos: prioridad a coincidencia exacta por name+brand (publicado). Si solo coincide el name y existe versión “Generic” publicada, se sugiere usarla o “Submit Brand” para revisión. Ver `server/services/visionService.ts:1`.
-
-Hardware
-
-- Componente de hardware utilizado: cámara del dispositivo del usuario (captura de etiqueta desde el navegador en `pages/add-photo.vue:1`). No se requiere driver nativo ni puente adicional.
-
-Stack Tecnológico
-
-- Frontend: Nuxt 4, Vue 3, Vite. Vistas en `pages/*`, layouts en `layouts/*`.
-- Backend: Nitro (Node server) + H3 (`server/api/**` y `server/controllers/**`).
-- Base de datos: PostgreSQL (modo pooler de Supabase soportado). ORM: Drizzle. Esquema en `server/db/schema.ts:1`.
-- Autenticación: cookies firmadas (HMAC) con `NUXT_SESSION_SECRET`. Utilidades en `server/utils/auth.ts:1`.
-- IA (Vision): Gemini 2.5 Flash (Google Generative Language API), cliente en `server/utils/gemini.ts:1`.
-- Node.js: 22 LTS recomendado. Ver sección de versiones.
-
-Arquitectura (detallada)
-
-- Capas y Patrones
-  - Domain: contratos de entrada/salida en `server/domain/*`.
-  - Repository: acceso a datos en `server/repositories/*` (PostgreSQL vía Drizzle). Ej.: `supplementRepository.ts:1` (búsqueda, creación pending, updates, publicación/rechazo, conversión de relaciones).
-  - Service: lógica de negocio en `server/services/*`. Ej.: `visionService.ts:1` (reconocimiento + matching) y `authService.ts:1`.
-  - Controller: orquestación de servicios en `server/controllers/*`.
-  - API Routes (Nitro/H3): `server/api/**` define endpoints REST.
-  - Utils: `server/utils/*` (db, auth, gemini).
-  - Plugin de bootstrap SQL: `server/plugins/bootstrap-db.ts:1` (idempotente y desactivado por defecto contra pooler).
-
-- Ciclo de Vida (Flujos principales)
-  - Autenticación: `POST /api/auth/login` firma cookie; `GET /api/auth/me` expone sesión; `POST /api/auth/logout` invalida cookie.
-  - Reconocimiento por foto:
-    1) El cliente selecciona o toma foto en `pages/add-photo.vue:1` y envía `multipart/form-data` a `POST /api/vision/supplement`.
-    2) En el backend, `server/api/vision/supplement.post.ts:1` llama a `visionService.recognizeSupplementFromImage`.
-    3) `visionService` usa `geminiRecognizeSupplement` para extraer campos estructurados y decide:
-       - Match exacto (name+brand, publicado) → UI muestra opción “Add to My Stack”.
-       - Sugerencia Generic (name coincide, brand distinto) → UI ofrece “Add Generic” o “Submit Brand”.
-       - Sin match → crea `supplement` con status `pending` y relación `user_supplements.submitted`.
-    4) En Admin, `pages/admin/products.vue:1` permite Curate (PUT + Publish) o Publish directo.
-    5) Al publicar, `user_supplements` con `relation='submitted'` se convierten a `relation='uses'`.
-  - Mi Stack: `GET /api/user/supplements` lista los suplementos del usuario con `relation='uses'`. Vista `pages/stack.vue:1`.
-
-- Base de Datos
-  - Tablas
-    - `users`: usuarios finales. Campos principales: `id`, `email`, `username`, `password_hash`, `created_at`.
-    - `admins`: rol admin referenciado a `users.id`.
-    - `supplements`: catálogo de suplementos con curación. Campos: `id`, `name`, `brand`, `form`, `serving_size`, `serving_unit`, `per_serving` (JSONB), `status`, `created_by`, `created_at`, `reviewed_by`, `reviewed_at`, `review_notes`.
-    - `user_supplements`: relaciones usuario↔suplemento con `relation`.
-  - Enums
-    - `supplement_status`: `draft | pending | published | rejected`.
-    - `user_supp_relation`: `added | uses | favorite | submitted`.
-  - Índices
-    - `supplements`: por `status`, `lower(name)`, `lower(brand)`, y `GIN` sobre `per_serving`.
-  - Notas operativas
-    - Si se insertaron datos manuales, la secuencia de `supplements.id` puede desalinearse. Endpoint admin para corregir: `POST /api/admin/db/fix-sequences`.
-    - Endpoints admin para asegurar enums: `POST /api/admin/db/ensure-enums`.
-
-- Endpoints (principales)
-  - Auth
-    - `POST /api/auth/signup` — crea usuario.
-    - `POST /api/auth/login` — inicia sesión y firma cookie.
-    - `POST /api/auth/logout` — cierra sesión.
-    - `GET /api/auth/me` — sesión actual.
-  - Vision / Suplementos (usuario)
-    - `POST /api/vision/supplement` — multipart con `image`; retorna `match`, `generic_suggestion`, `pending` o `no_match`.
-    - `POST /api/supplements/submit` — crea `supplement` en `pending` con los datos detectados (brand específico) y relación `submitted`.
-    - `GET /api/supplements` — listado simple para vistas públicas.
-    - `GET /api/user/supplements` — suplementos del usuario con `relation='uses'`.
-    - `POST /api/user/supplements` — agrega relación (`uses`, `added`, `submitted`).
-  - Admin
-    - `GET /api/admin/summary` — métricas simples (usuarios y suplementos).
-    - `GET /api/users` / `GET /api/users/:id` / `PUT /api/users/:id` / `DELETE /api/users/:id` — gestión de usuarios.
-    - `GET /api/admins` / `POST /api/admins` / `DELETE /api/admins/:userId` — gestión de admins.
-    - `GET /api/supplements/pending` — lista pendientes.
-    - `PUT /api/supplements/:id` — actualiza detalles (name, brand, form, serving_size, serving_unit, per_serving).
-    - `POST /api/supplements/:id/publish` — publica y convierte `submitted` → `uses`.
-    - `POST /api/supplements/:id/reject` — rechaza (con `review_notes`).
-    - `POST /api/admin/db/ensure-enums` — asegura enums.
-    - `POST /api/admin/db/fix-sequences` — re-alinea secuencias.
-
-- Páginas y Vistas
-  - Públicas: `pages/index.vue:1` (landing).
-  - Auth: `pages/login.vue:1`, `pages/signup.vue:1`.
-  - Cliente: `pages/dashboard.vue:1` (layout), `pages/stack.vue:1` (Mi Stack), `pages/database.vue:1`, `pages/add-photo.vue:1`.
-  - Admin: `pages/admin/login.vue:1`, `pages/admin/index.vue:1` (resumen), `pages/admin/users.vue:1`, `pages/admin/database.vue:1`, `pages/admin/products.vue:1` (curación).
-  - Layouts: `layouts/default.vue:1`, `layouts/dashboard.vue:1`, `layouts/admin.vue:1`.
-
-Seguridad y Sesiones
-
-- Sesiones mediante cookie firmada (HMAC) con `NUXT_SESSION_SECRET`. Helpers `useAuth`, `requireUser`, `requireAdmin` en `server/utils/auth.ts:1`.
-- En producción, cookie con `httpOnly`, `secure` y `sameSite=lax`.
-
-Configuración y Variables de Entorno
-
-- `SUPABASE_DB_POOL_URL` o `DATABASE_URL`: cadena de conexión PostgreSQL.
-- `NUXT_SESSION_SECRET`: requerido para firmar cookies.
-- `GEMINI_API_KEY`: requerido para llamadas al modelo Vision.
-- `NUXT_DB_BOOTSTRAP`: `1/true` para ejecutar bootstrap SQL (no contra pooler de Supabase).
-
-Versiones y Requisitos
-
-- Node.js 22 LTS recomendado (mínimo >= 20.12). Ver `.nvmrc`, `.node-version` y `package.json` (engines).
-- Si aparece error de `node:stream getDefaultHighWaterMark`, actualizar Node.
-
-Despliegue
-
-- Actual: Vercel (URL pública en este README). Nitro funciona bien en serverless.
-- Opción AWS (propuesta):
-  - Backend (Nitro) en ECS Fargate o EC2, `RDS PostgreSQL`, `S3` para estáticos, `CloudWatch` para logs, `Secrets Manager` para secretos.
-  - Alternativa serverless: API Gateway + Lambda (Nitro preset) + RDS Proxy + RDS PostgreSQL.
-
-Observabilidad y Logs
-
-- Logs de servidor vía consola; errores de DB/IA se registran con contexto. En despliegue, enviar a `CloudWatch` o equivalente.
-
-Consideraciones de Calidad y Pendientes
-
-- Asegurar enums y secuencias en ambientes con datos precargados (`/api/admin/db/ensure-enums` y `/api/admin/db/fix-sequences`).
-- Manejo de rate limits y errores del proveedor IA (reintentos/backoff) como mejora futura.
-- Validación y normalización adicional de `per_serving` (diccionario de nutrientes) como mejora futura.
-- Internacionalización de UI: textos en español listos; puede ampliarse a i18n completo.
+- La solución materializa un flujo completo de reconocimiento, propuesta de coincidencia y curación, con una arquitectura por capas que facilita mantenimiento y evolución.
+- El uso de Gemini 2.5 Flash permitió extraer información clave de etiquetas reales, con normalización multilingüe.
+- La separación Cliente/Admin y el proceso de publicación garantizan calidad y control del catálogo, mientras que la vista Mi Stack ofrece una experiencia útil y clara para el usuario.
+- El proyecto queda listo para producción en Vercel y tiene un camino de adopción a AWS con PostgreSQL administrado.
