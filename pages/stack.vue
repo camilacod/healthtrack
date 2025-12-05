@@ -250,6 +250,9 @@ const deleteConfirmOpen = ref(false)
 const itemToDelete = ref<StackItem | null>(null)
 const deleting = ref(false)
 
+// Add menu for empty state
+const showAddMenu = ref(false)
+
 function openDeleteConfirm(item: StackItem) {
   itemToDelete.value = item
   deleteConfirmOpen.value = true
@@ -296,7 +299,13 @@ onMounted(load)
     <section class="card-container">
       <div v-if="loading" class="loading-state">Loading...</div>
       <p v-if="error" class="error-msg">{{ error }}</p>
-      <div v-if="!loading && filtered.length === 0" class="empty-state">No items in your stack yet.</div>
+      <div v-if="!loading && filtered.length === 0" class="empty-state">
+        <p class="empty-text">No items in your stack yet.</p>
+        <button class="add-first-btn" @click="showAddMenu = true">
+          <span class="plus-icon">+</span>
+          Add your first supplement
+        </button>
+      </div>
 
       <div class="grid" v-if="filtered.length">
         <div class="supplement-card" v-for="item in filtered" :key="item.id">
@@ -495,6 +504,33 @@ onMounted(load)
         </div>
       </div>
     </Teleport>
+
+    <!-- Add Menu Modal -->
+    <Teleport to="body">
+      <div v-if="showAddMenu" class="add-menu-overlay" @click.self="showAddMenu = false">
+        <div class="add-menu">
+          <h3 class="menu-title">Add Supplement</h3>
+          <div class="menu-options">
+            <NuxtLink to="/database" class="menu-option" @click="showAddMenu = false">
+              <span class="option-icon">🔍</span>
+              <div class="option-text">
+                <span class="option-title">Search Database</span>
+                <span class="option-desc">Find supplements in our database</span>
+              </div>
+            </NuxtLink>
+            
+            <NuxtLink to="/add-photo" class="menu-option" @click="showAddMenu = false">
+              <span class="option-icon">📷</span>
+              <div class="option-text">
+                <span class="option-title">Photo of Product</span>
+                <span class="option-desc">Take or upload a photo</span>
+              </div>
+            </NuxtLink>
+          </div>
+          <button class="btn-menu-cancel" @click="showAddMenu = false">Cancel</button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -559,7 +595,7 @@ onMounted(load)
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-.loading-state, .empty-state { 
+.loading-state { 
   color: var(--text-sub); 
   padding: 2rem; 
   text-align: center; 
@@ -1116,6 +1152,158 @@ onMounted(load)
 .btn-delete:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+}
+
+.empty-text {
+  color: var(--text-sub);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.add-first-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  background: var(--secondary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.add-first-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.add-first-btn .plus-icon {
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+/* Add Menu */
+.add-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.add-menu {
+  background: white;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.menu-title {
+  text-align: center;
+  color: var(--primary);
+  margin: 0 0 1.5rem 0;
+  font-size: 1.2rem;
+}
+
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.menu-option:hover {
+  background: var(--bg-cream);
+  border-color: var(--secondary);
+}
+
+.option-icon {
+  font-size: 1.5rem;
+  background: #f3f4f6;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.option-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.option-desc {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.btn-menu-cancel {
+  width: 100%;
+  padding: 0.8rem;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .add-menu-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  
+  .add-menu {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    width: 100%;
+    max-width: none;
+  }
 }
 
 /* Mobile Responsive */

@@ -42,11 +42,15 @@ type DashboardData = {
 
 const loading = ref(true)
 const error = ref('')
-const stats = ref<DailyStats>({ taken: 0, total: 0, streak: 0, weeklyConsistency: 0 })
+const todayStats = ref<DailyStats>({ taken: 0, total: 0, streak: 0, weeklyConsistency: 0 })
 const weeklyData = ref<WeeklyDay[]>([])
 const doses = ref<ScheduledDose[]>([])
 const selectedDate = ref(new Date())
 const showAddMenu = ref(false)
+
+// Selected day stats (for tracking doses on that specific day)
+const selectedDayTaken = ref(0)
+const selectedDayTotal = ref(0)
 
 const TIME_GROUPS = [
   { id: 'morning', label: 'Morning', icon: '☀️', timeRange: '6 AM - 12 PM' },
@@ -56,8 +60,8 @@ const TIME_GROUPS = [
 ] as const
 
 const progressPercentage = computed(() => {
-  if (stats.value.total === 0) return 0
-  return Math.round((stats.value.taken / stats.value.total) * 100)
+  if (todayStats.value.total === 0) return 0
+  return Math.round((todayStats.value.taken / todayStats.value.total) * 100)
 })
 
 const formattedDate = computed(() => {
@@ -96,16 +100,27 @@ function formatTime12h(time24: string): string {
   return `${hour12}:${m} ${period}`
 }
 
-async function loadDashboard(date?: string) {
+async function loadDashboard(date?: string, isInitialLoad = false) {
   loading.value = true
   error.value = ''
   try {
     const dateStr = date || formatDateStr(selectedDate.value)
+    const todayStr = formatDateStr(new Date())
     const ts = Date.now() // Cache bust
+    
+    // Always fetch data for the selected date
     const data = await $fetch<DashboardData>(`/api/user/dashboard?date=${dateStr}&_t=${ts}`)
-    stats.value = data.stats
-    weeklyData.value = data.weeklyData
+    
+    // Update doses for selected day
     doses.value = data.doses
+    selectedDayTaken.value = data.stats.taken
+    selectedDayTotal.value = data.stats.total
+    
+    // Only update today's stats and weekly data on initial load or when viewing today
+    if (isInitialLoad || dateStr === todayStr) {
+      todayStats.value = data.stats
+      weeklyData.value = data.weeklyData
+    }
   } catch (e: any) {
     console.error('Dashboard load error:', e)
     error.value = e?.data?.message || 'Failed to load dashboard'
@@ -123,6 +138,8 @@ watch(() => route.fullPath, () => {
 
 async function toggleDose(dose: ScheduledDose) {
   const dateStr = formatDateStr(selectedDate.value)
+  const todayStr = formatDateStr(new Date())
+  const isToday = dateStr === todayStr
   
   if (dose.taken && dose.logId) {
     // Unmark dose
@@ -131,7 +148,18 @@ async function toggleDose(dose: ScheduledDose) {
       dose.taken = false
       dose.takenAt = null
       dose.logId = null
-      stats.value.taken = Math.max(0, stats.value.taken - 1)
+      selectedDayTaken.value = Math.max(0, selectedDayTaken.value - 1)
+      
+      // Update today's stats only if we're on today
+      if (isToday) {
+        todayStats.value.taken = Math.max(0, todayStats.value.taken - 1)
+      }
+      
+      // Update weekly data for this day
+      const dayData = weeklyData.value.find(d => d.date === dateStr)
+      if (dayData) {
+        dayData.taken = Math.max(0, dayData.taken - 1)
+      }
     } catch (e: any) {
       error.value = e?.data?.message || 'Failed to unmark dose'
     }
@@ -149,7 +177,18 @@ async function toggleDose(dose: ScheduledDose) {
       dose.taken = true
       dose.takenAt = result.takenAt
       dose.logId = result.logId
-      stats.value.taken++
+      selectedDayTaken.value++
+      
+      // Update today's stats only if we're on today
+      if (isToday) {
+        todayStats.value.taken++
+      }
+      
+      // Update weekly data for this day
+      const dayData = weeklyData.value.find(d => d.date === dateStr)
+      if (dayData) {
+        dayData.taken++
+      }
     } catch (e: any) {
       error.value = e?.data?.message || 'Failed to log dose'
     }
@@ -175,10 +214,10 @@ function getGroupStats(groupId: string) {
 
 // Watch for date changes
 watch(selectedDate, () => {
-  loadDashboard(formatDateStr(selectedDate.value))
+  loadDashboard(formatDateStr(selectedDate.value), false)
 })
 
-onMounted(() => loadDashboard())
+onMounted(() => loadDashboard(undefined, true))
 </script>
 
 <template>
@@ -199,7 +238,7 @@ onMounted(() => loadDashboard())
         <div class="stat-content">
           <div class="stat-info">
             <p class="stat-label">Today's Progress</p>
-            <p class="stat-value">{{ stats.taken }}/{{ stats.total }}</p>
+            <p class="stat-value">{{ todayStats.taken }}/{{ todayStats.total }}</p>
           </div>
           <div class="progress-ring">
             <svg viewBox="0 0 36 36" class="ring-svg">
@@ -229,7 +268,7 @@ onMounted(() => loadDashboard())
         <div class="stat-content">
           <div class="stat-info">
             <p class="stat-label">Current Streak</p>
-            <p class="stat-value">{{ stats.streak }} <span class="stat-unit">days</span></p>
+            <p class="stat-value">{{ todayStats.streak }} <span class="stat-unit">days</span></p>
             <p class="stat-hint">Keep it going!</p>
           </div>
           <div class="stat-icon green">
@@ -243,7 +282,7 @@ onMounted(() => loadDashboard())
         <div class="stat-content">
           <div class="stat-info">
             <p class="stat-label">Weekly Consistency</p>
-            <p class="stat-value">{{ stats.weeklyConsistency }}%</p>
+            <p class="stat-value">{{ todayStats.weeklyConsistency }}%</p>
           </div>
           <div class="stat-icon orange">
             <span class="icon-text">📅</span>
