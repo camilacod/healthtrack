@@ -1,6 +1,9 @@
 # HealthTrack
 
-> Seguimiento de suplementos con reconocimiento por imagen e interfaz Admin/Cliente. Extracción automática de nombre de compuesto, marca y datos por porción usando IA, con curación por administradores.
+> Seguimiento de suplementos con reconocimiento por imagen e interfaz Admin/Cliente. Detección de suplementos usando IA, con curación por administradores.
+
+
+![Project](hero.png)
 
 ## Características Clave
 
@@ -29,6 +32,9 @@
 ## Resumen del Proyecto
 
 HealthTrack permite a usuarios identificar suplementos desde una foto, comparar con el catálogo y agregarlos a su Stack. Cuando no existe coincidencia exacta, el sistema crea una solicitud pendiente que el equipo Admin revisa y publica. La arquitectura separa responsabilidades por capas y mantiene un flujo de datos claro entre UI, servicios y repositorios.
+
+
+![Project](flujo.png)
 
 ## Arquitectura del Sistema
 
