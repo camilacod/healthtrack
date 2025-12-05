@@ -77,6 +77,28 @@ async function add(s: any) {
   }
 }
 
+// Product detail modal
+const selectedProduct = ref<any>(null)
+
+function openProductDetail(s: any) {
+  selectedProduct.value = s
+}
+
+function closeProductDetail() {
+  selectedProduct.value = null
+}
+
+function formatPerServingKey(key: string): string {
+  // Convert snake_case to readable format: vitamin_c_mg -> Vitamin C (mg)
+  return key
+    .replace(/_mg$/i, ' (mg)')
+    .replace(/_mcg$/i, ' (mcg)')
+    .replace(/_g$/i, ' (g)')
+    .replace(/_iu$/i, ' (IU)')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 onMounted(load)
 </script>
 
@@ -148,7 +170,7 @@ onMounted(load)
         </div>
 
         <div class="products-grid">
-          <div v-for="s in filteredSupplements" :key="s.id" class="product-card">
+          <div v-for="s in filteredSupplements" :key="s.id" class="product-card" @click="openProductDetail(s)">
             <div class="product-image-placeholder">
               <!-- Using first letter of name as icon/placeholder since "no pics" -->
               <span class="placeholder-text">{{ s.name.charAt(0) }}</span>
@@ -167,7 +189,7 @@ onMounted(load)
               </div>
               
               <div class="action-row">
-                <button class="btn-add" @click="add(s)">Add to Stack</button>
+                <button class="btn-add" @click.stop="add(s)">Add to Stack</button>
               </div>
             </div>
           </div>
@@ -181,6 +203,58 @@ onMounted(load)
     </div>
 
     <div v-if="error" class="error-toast">{{ error }}</div>
+
+    <!-- Product Detail Modal -->
+    <div v-if="selectedProduct" class="modal-overlay" @click.self="closeProductDetail">
+      <div class="modal-card">
+        <button class="modal-close" @click="closeProductDetail">✕</button>
+        
+        <div class="modal-header">
+          <div class="modal-icon">{{ selectedProduct.name.charAt(0) }}</div>
+          <div class="modal-title-section">
+            <span class="modal-brand">{{ selectedProduct.brand || 'Generic' }}</span>
+            <h2 class="modal-title">{{ selectedProduct.name }}</h2>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-row">
+            <span class="detail-label">Category</span>
+            <span class="detail-value category-badge">{{ selectedProduct.category || 'Others' }}</span>
+          </div>
+          <div class="detail-row" v-if="selectedProduct.form">
+            <span class="detail-label">Form</span>
+            <span class="detail-value">{{ selectedProduct.form }}</span>
+          </div>
+          <div class="detail-row" v-if="selectedProduct.servingSize">
+            <span class="detail-label">Serving Size</span>
+            <span class="detail-value">{{ selectedProduct.servingSize }} {{ selectedProduct.servingUnit }}</span>
+          </div>
+
+          <!-- Per Serving Section -->
+          <div class="per-serving-section" v-if="selectedProduct.perServing && Object.keys(selectedProduct.perServing).length">
+            <h3 class="per-serving-title">Nutritional Info (Per Serving)</h3>
+            <div class="nutrients-grid">
+              <div 
+                v-for="(value, key) in selectedProduct.perServing" 
+                :key="key" 
+                class="nutrient-item"
+              >
+                <span class="nutrient-name">{{ formatPerServingKey(String(key)) }}</span>
+                <span class="nutrient-value">{{ value }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="no-nutrition">
+            <p>No nutritional information available.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-add-modal" @click="add(selectedProduct); closeProductDetail()">Add to My Stack</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -477,5 +551,214 @@ onMounted(load)
 @keyframes slideIn {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* Product Detail Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  background: white;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #6b7280;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.modal-header {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+}
+
+.modal-icon {
+  width: 60px;
+  height: 60px;
+  background: var(--bg-cream);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.modal-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-brand {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-sub);
+  letter-spacing: 0.05em;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.3;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.detail-label {
+  color: var(--text-sub);
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.category-badge {
+  background: #fef3e8;
+  color: var(--secondary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+}
+
+.per-serving-section {
+  margin-top: 1.5rem;
+}
+
+.per-serving-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary);
+}
+
+.nutrients-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.nutrient-item {
+  background: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nutrient-name {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  font-weight: 500;
+}
+
+.nutrient-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.no-nutrition {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-sub);
+  background: #f9fafb;
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+.no-nutrition p {
+  margin: 0;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.btn-add-modal {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add-modal:hover {
+  background: var(--secondary);
+}
+
+/* Make product cards look clickable */
+.product-card {
+  cursor: pointer;
 }
 </style>

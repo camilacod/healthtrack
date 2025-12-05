@@ -245,6 +245,35 @@ function getDayAbbrev(dayId: number): string {
   return DAYS.find(d => d.id === dayId)?.short || ''
 }
 
+// Delete confirmation
+const deleteConfirmOpen = ref(false)
+const itemToDelete = ref<StackItem | null>(null)
+const deleting = ref(false)
+
+function openDeleteConfirm(item: StackItem) {
+  itemToDelete.value = item
+  deleteConfirmOpen.value = true
+}
+
+function closeDeleteConfirm() {
+  deleteConfirmOpen.value = false
+  itemToDelete.value = null
+}
+
+async function confirmDelete() {
+  if (!itemToDelete.value) return
+  deleting.value = true
+  try {
+    await $fetch(`/api/user/supplements/${itemToDelete.value.id}`, { method: 'DELETE' })
+    closeDeleteConfirm()
+    await load()
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Error removing supplement'
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -271,6 +300,7 @@ onMounted(load)
 
       <div class="grid" v-if="filtered.length">
         <div class="supplement-card" v-for="item in filtered" :key="item.id">
+          <button class="delete-btn" @click="openDeleteConfirm(item)" title="Remove from my stack">✕</button>
           <div class="card-content">
             <h3 class="supplement-name">{{ item.name }}</h3>
             <p class="supplement-brand">{{ item.brand || 'Generic' }}</p>
@@ -334,6 +364,26 @@ onMounted(load)
         </div>
       </div>
     </section>
+
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <div v-if="deleteConfirmOpen" class="modal-overlay" @click.self="closeDeleteConfirm">
+        <div class="confirm-modal">
+          <div class="confirm-icon">⚠️</div>
+          <h3 class="confirm-title">Remove supplement?</h3>
+          <p class="confirm-text">
+            Are you sure you want to remove <strong>{{ itemToDelete?.name }}</strong> from your stack? 
+            The associated schedule will also be deleted.
+          </p>
+          <div class="confirm-actions">
+            <button class="btn-cancel" @click="closeDeleteConfirm">Cancel</button>
+            <button class="btn-delete" :disabled="deleting" @click="confirmDelete">
+              {{ deleting ? 'Removing...' : 'Remove' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Schedule Modal -->
     <Teleport to="body">
@@ -531,6 +581,34 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.supplement-card:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: #fecaca;
 }
 
 .supplement-card:hover {
@@ -976,6 +1054,66 @@ onMounted(load)
 }
 
 .btn-save:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Confirm Modal */
+.confirm-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.confirm-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 0.75rem 0;
+}
+
+.confirm-text {
+  color: var(--text-sub);
+  font-size: 0.95rem;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.confirm-text strong {
+  color: var(--primary);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-delete {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #dc2626;
+  border: none;
+  color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-delete:disabled {
   background: #ccc;
   cursor: not-allowed;
 }

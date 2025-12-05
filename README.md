@@ -8,7 +8,7 @@
 - Normalización multilingüe: detección en inglés/español y estandarización de form y serving_unit.
 - Sugerencia por nombre: si existe versión publicada “Generic”, el usuario puede agregarla o enviar su marca a revisión.
 - Curación admin: edición completa del producto (PUT) y publicación/rechazo, con conversión automática de submitted → uses.
-- Mi Stack: vista del usuario con suplementos en uso, datos por porción y búsqueda.
+- Mi Stack: vista del usuario con suplementos en uso, datos por porción, búsqueda y eliminación con confirmación.
 
 ## Tabla de Contenidos
 
@@ -61,7 +61,9 @@ Ciclos de vida y capas
   1) El usuario navega a `pages/database.vue:1`.
   2) El cliente carga el catálogo publicado con `GET /api/supplements` y aplica filtro local.
   3) Al elegir un producto, hace clic en “Add to Stack” → `POST /api/user/supplements` con `relation='uses'`.
-  4) El producto aparece en “Mi Stack”. Si no encuentra su producto, utiliza el flujo de foto.
+  4) El producto aparece en “Mi Stack”.
+  5) Desde "Mi Stack" el usuario puede visualizar nombre, marca, forma, porción (serving_size y serving_unit) y composición por porción (per_serving) en tarjetas, además de buscar/filtrar dentro de su lista y eliminar suplementos con confirmación.
+  6) Si no encuentra su producto en el catálogo, puede utilizar el flujo de foto.
 
 - Inicio por foto (reconocimiento):
   1) El cliente captura o selecciona foto en `pages/add-photo.vue:1` y envía `multipart/form-data` a `POST /api/vision/supplement`.
@@ -72,8 +74,9 @@ Ciclos de vida y capas
      - Sin match → crea `supplements.status='pending'` y `user_supplements.relation='submitted'`.
   4) En Admin, `pages/admin/products.vue:1` permite Curate (PUT + Publish) o Publish directo.
   5) Al publicar, el sistema convierte `submitted` → `uses` en `user_supplements`.
+  6) Desde "Mi Stack", el usuario puede visualizar nombre, marca, forma, porción (serving_size y serving_unit) y composición por porción (per_serving), buscar/filtrar en su lista y eliminar suplementos con confirmación.
 
-- Mi Stack: `GET /api/user/supplements` lista suplementos con `relation='uses'`. Vista `pages/stack.vue:1`.
+- Mi Stack: `GET /api/user/supplements` lista suplementos con `relation='uses'`. `DELETE /api/user/supplements/:id` elimina un suplemento del stack (incluye confirmación visual). Vista `pages/stack.vue:1`.
 
 Capas y patrones
 
@@ -141,6 +144,7 @@ Capas y patrones
   - `POST /api/supplements/submit` — crea pendiente con brand específico, relación `submitted`.
   - `POST /api/user/supplements` — agrega relación (`uses`, `added`, `submitted`).
   - `GET /api/user/supplements` — suplementos del usuario con `relation='uses'`.
+  - `DELETE /api/user/supplements/:id` — elimina suplemento del stack del usuario (y horarios asociados).
 
 - Suplementos (Admin)
   - `GET /api/supplements/pending` — lista pendientes.
@@ -155,10 +159,10 @@ Capas y patrones
 - `supplements` con `status` (`draft | pending | published | rejected`).
 - `user_supplements` con `relation` (`added | uses | favorite | submitted`).
 
-
+![Database Schema](schema.png)
 Esquema (SQL de referencia)
 
-![Database Schema](schema.png)
+
 
 
 ```sql

@@ -27,7 +27,7 @@ export async function countSupplementsByStatusRepo(): Promise<{ total: number; p
 
 export async function listSupplementsRepo() {
   const rows = await db.execute(
-    sql`SELECT id, name, brand, form, serving_size as "servingSize", serving_unit as "servingUnit", category, status
+    sql`SELECT id, name, brand, form, serving_size as "servingSize", serving_unit as "servingUnit", per_serving as "perServing", category, status
         FROM supplements
         WHERE status = 'published'
         ORDER BY created_at DESC

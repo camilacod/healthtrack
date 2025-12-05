@@ -62,7 +62,7 @@ function startCurate(p: any) {
   editForm.form = p.form || ''
   editForm.servingSize = p.servingSize || ''
   editForm.servingUnit = p.servingUnit || ''
-  editForm.perServing = p.perServing.constructor === Object ? JSON.stringify(p.perServing) : (p.perServing || '') // JSON string
+  editForm.perServing = p.perServing?.constructor === Object ? JSON.stringify(p.perServing) : (p.perServing || '') // JSON string
 }
 
 async function saveAndPublish() {

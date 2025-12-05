@@ -39,6 +39,19 @@ const filteredSupplements = computed(() => {
     (s.form && s.form.toLowerCase().includes(q))
   )
 })
+
+function formatPerServing(perServing: any): string {
+  if (!perServing) return '-'
+  if (typeof perServing === 'string') {
+    try { perServing = JSON.parse(perServing) } catch { return perServing }
+  }
+  if (typeof perServing === 'object') {
+    const entries = Object.entries(perServing).slice(0, 3)
+    const formatted = entries.map(([k, v]) => `${k}: ${v}`).join(', ')
+    return entries.length < Object.keys(perServing).length ? formatted + '...' : formatted
+  }
+  return '-'
+}
 </script>
 
 <template>
@@ -68,6 +81,7 @@ const filteredSupplements = computed(() => {
               <th>Form</th>
               <th>Serving Size</th>
               <th>Unit</th>
+              <th>Per Serving</th>
               <th>Category</th>
               <th>Status</th>
             </tr>
@@ -79,6 +93,7 @@ const filteredSupplements = computed(() => {
               <td>{{ s.form || '-' }}</td>
               <td>{{ s.servingSize || '-' }}</td>
               <td>{{ s.servingUnit || '-' }}</td>
+              <td class="cell-per-serving" :title="JSON.stringify(s.perServing)">{{ formatPerServing(s.perServing) }}</td>
               <td>{{ s.category || 'Others' }}</td>
               <td>
                 <span class="status-badge" :class="s.status">{{ s.status }}</span>
@@ -192,6 +207,16 @@ td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-per-serving {
+  max-width: 220px;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
 }
 
 .empty-state {
