@@ -116,7 +116,7 @@ Capas y patrones
 ## Frontend (Vistas y UX)
 
 - Cliente: Dashboard (layout), Mi Stack (`/stack`), Base de Datos (`/database`), Add Photo (`/add-photo`).
-- Admin: Login, Resumen, Usuarios, Base de Datos, Curación de Productos (pendientes, Curate, Save & Publish, Publish, Reject).
+- Admin: Login, Resumen, Usuarios, Base de Datos (vista detallada, edición y eliminación de suplementos), Curación de Productos (pendientes, Curate, Save & Publish, Publish, Reject).
 - Layouts: `default`, `dashboard`, `admin`.
 
 ## Operaciones CRUD (principales)
@@ -148,7 +148,9 @@ Capas y patrones
 
 - Suplementos (Admin)
   - `GET /api/supplements/pending` — lista pendientes.
-  - `PUT /api/supplements/:id` — actualiza detalles (name, brand, form, serving_size, serving_unit, per_serving).
+  - `GET /api/admin/supplements` — lista todos los suplementos con información de auditoría.
+  - `PUT /api/supplements/:id` — actualiza detalles (name, brand, form, serving_size, serving_unit, per_serving, category).
+  - `DELETE /api/supplements/:id` — elimina suplemento y todas las relaciones asociadas (user_supplements, schedules, logs).
   - `POST /api/supplements/:id/publish` — publica y convierte `submitted` → `uses`.
   - `POST /api/supplements/:id/reject` — rechaza con `review_notes`.
   - `GET /api/admin/summary` — métricas.
@@ -270,7 +272,7 @@ CREATE TABLE public.users (
 ## Despliegue
 
 - Producción actual: Vercel (Nitro serverless).
-- Opción AWS: ECS Fargate o EC2 con RDS PostgreSQL, S3 y Secrets Manager; alternativa serverless con API Gateway + Lambda + RDS Proxy.
+
 
 ## Link deployment
 
@@ -285,4 +287,4 @@ https://drive.google.com/file/d/1CstcDwbtASy4_F45bvn24v8mnjiXgZLN/view?usp=shari
 - La solución materializa un flujo completo de reconocimiento, propuesta de coincidencia y curación, con una arquitectura por capas que facilita mantenimiento y evolución.
 - El uso de Gemini 2.5 Flash permitió extraer información clave de etiquetas reales, con normalización multilingüe.
 - La separación Cliente/Admin y el proceso de publicación garantizan calidad y control del catálogo, mientras que la vista Mi Stack ofrece una experiencia útil y clara para el usuario.
-- El proyecto queda listo para producción en Vercel y tiene un camino de adopción a AWS con PostgreSQL administrado.
+- El proyecto queda listo para producción en Vercel con la posibilidad de integrar nuevos features con IA para el usuario.

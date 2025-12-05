@@ -241,10 +241,22 @@ const menuItems = [
   z-index: 40;
 }
 
-/* Desktop: sidebar hidden when not open */
+/* Desktop: sidebar visible by default, toggleable */
 @media (min-width: 769px) {
   .sidebar {
     transform: translateX(0);
+  }
+  
+  .sidebar:not(.sidebar-open) {
+    transform: translateX(-100%);
+  }
+  
+  .main-content {
+    margin-left: 260px;
+  }
+  
+  .main-content:not(.content-shifted) {
+    margin-left: 0;
   }
 }
 
@@ -256,6 +268,10 @@ const menuItems = [
   
   .sidebar.sidebar-open {
     transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
   }
   
   .main-content.content-shifted {

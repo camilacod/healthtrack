@@ -244,8 +244,39 @@ const menuItems = [
   z-index: 40;
 }
 
+/* Desktop: sidebar always visible, toggle just hides it */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+  
+  .sidebar:not(.sidebar-open) {
+    transform: translateX(-100%);
+  }
+  
+  .main-content {
+    margin-left: 260px;
+  }
+  
+  .main-content:not(.content-shifted) {
+    margin-left: 0;
+  }
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
   .main-content.content-shifted {
     margin-left: 0; /* Don't push content on mobile, just overlay */
   }
